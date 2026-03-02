@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.1 (2026-03-02)
+
+- Feat: Context Tab v2 — merged from PR #11, turn-based conversation view with collapsible history turns and current turn auto-selection
+- Build: rebuild dist with latest source changes
+
 ## 1.4.0 (2026-03-02)
 
 - Feat: CLI mode — embedded PTY terminal panel with split-pane layout, WebSocket-based input/output
