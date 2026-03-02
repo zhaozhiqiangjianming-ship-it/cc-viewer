@@ -8,10 +8,8 @@ import { setupInterceptor } from './interceptor.js';
 // Setup interceptor to patch fetch
 setupInterceptor();
 
-function getOriginalBaseUrl() {
-  // 1. Check settings.json (Priority 1)
+function getBaseUrlFromSettings(settingsPath) {
   try {
-    const settingsPath = join(homedir(), '.claude', 'settings.json');
     if (existsSync(settingsPath)) {
       const settings = JSON.parse(readFileSync(settingsPath, 'utf-8'));
       if (settings.env && settings.env.ANTHROPIC_BASE_URL) {
@@ -21,13 +19,32 @@ function getOriginalBaseUrl() {
   } catch (e) {
     // ignore
   }
+  return null;
+}
 
-  // 2. Check env var (Priority 2)
+function getOriginalBaseUrl() {
+  let cwd;
+  try { cwd = process.cwd(); } catch { cwd = null; }
+
+  // Check config files in priority order (highest first)
+  const configPaths = [];
+  if (cwd) {
+    configPaths.push(join(cwd, '.claude', 'settings.local.json'));
+    configPaths.push(join(cwd, '.claude', 'settings.json'));
+  }
+  configPaths.push(join(homedir(), '.claude', 'settings.json'));
+
+  for (const configPath of configPaths) {
+    const url = getBaseUrlFromSettings(configPath);
+    if (url) return url;
+  }
+
+  // Check env var
   if (process.env.ANTHROPIC_BASE_URL) {
     return process.env.ANTHROPIC_BASE_URL;
   }
 
-  // 3. Default
+  // Default
   return 'https://api.anthropic.com';
 }
 
