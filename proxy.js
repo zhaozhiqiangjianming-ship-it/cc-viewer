@@ -124,10 +124,15 @@ export function startProxy() {
         res.writeHead(response.status, responseHeaders);
 
         if (response.body) {
-          const { Readable } = await import('node:stream');
+          const { Readable, pipeline } = await import('node:stream');
           // @ts-ignore
           const nodeStream = Readable.fromWeb(response.body);
-          nodeStream.pipe(res);
+          // pipeline handles stream errors; without this, unhandled 'error' events crash the process.
+          pipeline(nodeStream, res, (err) => {
+            if (err && process.env.CCV_DEBUG) {
+              console.error('[CC-Viewer Proxy] Stream pipeline error:', err.message);
+            }
+          });
         } else {
           res.end();
         }

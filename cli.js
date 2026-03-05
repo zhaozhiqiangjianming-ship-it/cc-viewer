@@ -407,7 +407,7 @@ if (isCliMode || isDangerousMode) {
   } else {
     console.log(t('cli.uninstall.hookFail', { error: shellResult.error }));
   }
-
+  console.log(t('cli.uninstall.reloadShell'));
   console.log(t('cli.uninstall.done'));
   process.exit(0);
 } else {
