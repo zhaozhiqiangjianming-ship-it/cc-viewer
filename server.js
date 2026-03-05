@@ -10,8 +10,8 @@ import { Worker } from 'node:worker_threads';
 import { LOG_FILE, _initPromise, _resumeState, resolveResumeChoice, _projectName, _logDir, _cachedApiKey, _cachedAuthHeader, _cachedHaikuModel, initForWorkspace, resetWorkspace } from './interceptor.js';
 import { LOG_DIR } from './findcc.js';
 import { t, detectLanguage } from './i18n.js';
-import { checkAndUpdate } from './updater.js';
-import { loadPlugins, runWaterfallHook, runParallelHook, getPluginsInfo, PLUGINS_DIR } from './plugin-loader.js';
+import { checkAndUpdate } from './lib/updater.js';
+import { loadPlugins, runWaterfallHook, runParallelHook, getPluginsInfo, PLUGINS_DIR } from './lib/plugin-loader.js';
 
 const PREFS_FILE = join(LOG_DIR, 'preferences.json');
 const isCliMode = process.env.CCV_CLI_MODE === '1';
@@ -79,7 +79,7 @@ let statsWorker = null;
 
 function startStatsWorker() {
   try {
-    statsWorker = new Worker(new URL('./stats-worker.js', import.meta.url));
+    statsWorker = new Worker(new URL('./lib/stats-worker.js', import.meta.url));
     statsWorker.on('error', (err) => {
       console.error('[CC Viewer] Stats worker error:', err.message);
       statsWorker = null;
@@ -1307,8 +1307,11 @@ async function setupTerminalWebSocket(httpServer) {
     let fileWatchDebounceTimer = null;
     let currentWatchPath = null;
 
-    // 忽略规则：从统一的 IGNORED_PATTERNS 生成
-    const ignoredPaths = Array.from(IGNORED_PATTERNS).map(p => `**/${p}/**`);
+    // 忽略规则：从统一的 IGNORED_PATTERNS 生成，并忽略所有隐藏目录
+    const ignoredPaths = [
+      ...Array.from(IGNORED_PATTERNS).map(p => `**/${p}/**`),
+      '**/.*/**',  // 忽略所有隐藏目录（.git, .Trash, .docker 等）
+    ];
 
     // 启动文件监控
     const startFileWatcher = (watchPath) => {
@@ -1326,6 +1329,12 @@ async function setupTerminalWebSocket(httpServer) {
             stabilityThreshold: 100,
             pollInterval: 50
           }
+        });
+
+        // 监听 chokidar 错误事件，避免崩溃
+        fileWatcher.on('error', (error) => {
+          console.error('[CC Viewer] File watcher error:', error.message);
+          // 不要让错误导致进程崩溃，只记录日志
         });
 
         // 使用防抖避免频繁触发
@@ -1413,16 +1422,6 @@ async function setupTerminalWebSocket(httpServer) {
         if (currentWatchPath !== currentWorkspace.cwd) {
           console.log(`[CC Viewer] Starting file watcher for: ${currentWorkspace.cwd}`);
           startFileWatcher(currentWorkspace.cwd);
-        }
-      }
-
-      // 如果 PTY 未运行但在 CLI 模式下，监控当前工作目录
-      // 这样即使 PTY 启动失败，文件监控仍然可以工作
-      if (!currentWorkspace.running && isCliMode && (!fileWatcher || fileWatcher.closed)) {
-        const projectDir = process.env.CCV_PROJECT_DIR || process.cwd();
-        if (currentWatchPath !== projectDir) {
-          console.log(`[CC Viewer] Starting file watcher for current directory: ${projectDir}`);
-          startFileWatcher(projectDir);
         }
       }
     }, 1000); // 每秒检查一次

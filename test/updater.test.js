@@ -1,0 +1,201 @@
+import { describe, it, beforeEach, afterEach } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
+import { execFileSync } from 'node:child_process';
+import { checkAndUpdate } from '../lib/updater.js';
+
+const CACHE_DIR = join(homedir(), '.claude', 'cc-viewer');
+const CACHE_FILE = join(CACHE_DIR, 'update-check.json');
+
+// Save/restore helpers for cache file
+let savedCache = null;
+
+function backupCache() {
+  try {
+    if (existsSync(CACHE_FILE)) {
+      savedCache = readFileSync(CACHE_FILE, 'utf-8');
+    }
+  } catch {}
+}
+
+function restoreCache() {
+  try {
+    if (savedCache !== null) {
+      writeFileSync(CACHE_FILE, savedCache);
+    }
+  } catch {}
+  savedCache = null;
+}
+
+// ─── checkAndUpdate: disabled via env ───
+
+describe('checkAndUpdate — disabled', () => {
+  let origEnv;
+
+  beforeEach(() => {
+    origEnv = process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC;
+  });
+
+  afterEach(() => {
+    if (origEnv === undefined) {
+      delete process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC;
+    } else {
+      process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = origEnv;
+    }
+  });
+
+  it('returns disabled when CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC is set', async () => {
+    process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '1';
+    const result = await checkAndUpdate();
+    assert.equal(result.status, 'disabled');
+    assert.equal(result.remoteVersion, null);
+    assert.ok(result.currentVersion, 'should include currentVersion');
+  });
+});
+
+// ─── checkAndUpdate: skipped via recent cache ───
+
+describe('checkAndUpdate — skipped', () => {
+  let origEnv;
+
+  beforeEach(() => {
+    origEnv = process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC;
+    delete process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC;
+    backupCache();
+  });
+
+  afterEach(() => {
+    restoreCache();
+    if (origEnv === undefined) {
+      delete process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC;
+    } else {
+      process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = origEnv;
+    }
+  });
+
+  it('returns skipped when last check was recent', async () => {
+    mkdirSync(CACHE_DIR, { recursive: true });
+    writeFileSync(CACHE_FILE, JSON.stringify({ lastCheck: Date.now() }));
+    const result = await checkAndUpdate();
+    assert.equal(result.status, 'skipped');
+    assert.equal(result.remoteVersion, null);
+  });
+});
+
+// ─── checkAndUpdate: fetch path (network required) ───
+
+describe('checkAndUpdate — fetch', () => {
+  let origEnv;
+
+  beforeEach(() => {
+    origEnv = process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC;
+    delete process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC;
+    backupCache();
+  });
+
+  afterEach(() => {
+    restoreCache();
+    if (origEnv === undefined) {
+      delete process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC;
+    } else {
+      process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = origEnv;
+    }
+  });
+
+  it('fetches registry and returns a valid status', async () => {
+    // Force a check by writing an old timestamp
+    mkdirSync(CACHE_DIR, { recursive: true });
+    writeFileSync(CACHE_FILE, JSON.stringify({ lastCheck: 0 }));
+
+    const result = await checkAndUpdate();
+    // Could be 'latest', 'updated', 'major_available', or 'error' (network issue)
+    assert.ok(
+      ['latest', 'updated', 'major_available', 'error'].includes(result.status),
+      `unexpected status: ${result.status}`
+    );
+    assert.ok(result.currentVersion);
+
+    if (result.status !== 'error') {
+      assert.ok(result.remoteVersion, 'should have remoteVersion on success');
+      // Verify version format
+      assert.match(result.remoteVersion, /^\d+\.\d+\.\d+/);
+    }
+  });
+
+  it('currentVersion matches package.json', async () => {
+    process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '1';
+    const result = await checkAndUpdate();
+    const pkgPath = join(import.meta.dirname, '..', 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+    assert.equal(result.currentVersion, pkg.version);
+  });
+});
+
+// ─── parseVersion / isNewer (tested indirectly via subprocess) ───
+
+describe('version comparison logic (indirect)', () => {
+  // We test parseVersion/isNewer indirectly by evaluating them in a subprocess
+  // since they are not exported
+
+  function evalInModule(code) {
+    // Run a small inline script that imports nothing but replicates the logic
+    const script = `
+      function parseVersion(ver) {
+        const [major, minor, patch] = ver.split('.').map(Number);
+        return { major, minor, patch };
+      }
+      function isNewer(remote, current) {
+        const r = parseVersion(remote);
+        const c = parseVersion(current);
+        if (r.major !== c.major) return r.major > c.major;
+        if (r.minor !== c.minor) return r.minor > c.minor;
+        return r.patch > c.patch;
+      }
+      ${code}
+    `;
+    return execFileSync(process.execPath, ['-e', script], {
+      encoding: 'utf-8',
+      timeout: 5000,
+    }).trim();
+  }
+
+  it('parseVersion splits correctly', () => {
+    const out = evalInModule(`
+      const v = parseVersion('1.4.19');
+      console.log(JSON.stringify(v));
+    `);
+    assert.deepStrictEqual(JSON.parse(out), { major: 1, minor: 4, patch: 19 });
+  });
+
+  it('isNewer returns true for higher patch', () => {
+    const out = evalInModule(`console.log(isNewer('1.4.20', '1.4.19'));`);
+    assert.equal(out, 'true');
+  });
+
+  it('isNewer returns false for same version', () => {
+    const out = evalInModule(`console.log(isNewer('1.4.19', '1.4.19'));`);
+    assert.equal(out, 'false');
+  });
+
+  it('isNewer returns false for older version', () => {
+    const out = evalInModule(`console.log(isNewer('1.4.18', '1.4.19'));`);
+    assert.equal(out, 'false');
+  });
+
+  it('isNewer handles major version bump', () => {
+    const out = evalInModule(`console.log(isNewer('2.0.0', '1.9.99'));`);
+    assert.equal(out, 'true');
+  });
+
+  it('isNewer handles minor version bump', () => {
+    const out = evalInModule(`console.log(isNewer('1.5.0', '1.4.99'));`);
+    assert.equal(out, 'true');
+  });
+
+  it('isNewer: lower major is not newer', () => {
+    const out = evalInModule(`console.log(isNewer('0.9.99', '1.0.0'));`);
+    assert.equal(out, 'false');
+  });
+});

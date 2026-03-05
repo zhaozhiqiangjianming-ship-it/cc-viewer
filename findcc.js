@@ -1,6 +1,6 @@
 import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { execSync } from 'node:child_process';
 
@@ -68,6 +68,11 @@ export function resolveNativePath() {
       const result = execSync(cmd, { encoding: 'utf-8', shell: true, env: process.env }).trim();
       // 排除 shell function 的输出（多行说明不是路径）
       if (result && !result.includes('\n') && existsSync(result)) {
+        // 排除 npm 安装的符号链接（解析后指向 node_modules）
+        try {
+          const real = realpathSync(result);
+          if (real.includes('node_modules')) continue;
+        } catch {}
         return result;
       }
     } catch {

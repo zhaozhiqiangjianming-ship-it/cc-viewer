@@ -793,18 +793,46 @@ class AppHeader extends React.Component {
         key: 'language',
         icon: <GlobalOutlined />,
         label: t('ui.languageSettings'),
-        children: LANG_OPTIONS.map(o => ({
-          key: 'lang-' + o.value,
-          label: o.label,
-          style: o.value === getLang() ? { color: '#3b82f6' } : {},
-        })),
+        children: [{
+          key: 'lang-grid-container',
+          type: 'group',
+          label: (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '8px',
+              padding: '8px 4px',
+              minWidth: '360px',
+              maxHeight: 'none'
+            }}>
+              {LANG_OPTIONS.map(o => (
+                <Button
+                  key={o.value}
+                  size="small"
+                  type={o.value === getLang() ? 'primary' : 'default'}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLang(o.value);
+                    if (onLangChange) onLangChange();
+                  }}
+                  style={{
+                    width: '100%',
+                    textAlign: 'center'
+                  }}
+                >
+                  {o.label}
+                </Button>
+              ))}
+            </div>
+          ),
+        }],
       },
     ];
 
     return (
       <div className={styles.headerBar}>
         <Space size="middle">
-          <Dropdown menu={{ items: menuItems, onClick: ({ key }) => { if (key.startsWith('lang-')) { const lang = key.slice(5); setLang(lang); if (onLangChange) onLangChange(); } } }} trigger={['hover']}>
+          <Dropdown menu={{ items: menuItems }} trigger={['hover']}>
             <Text strong className={styles.titleText}>
               <img src="/favicon.ico" alt="Logo" className={styles.logoImage} />
               CC-Viewer <DownOutlined className={styles.titleArrow} />

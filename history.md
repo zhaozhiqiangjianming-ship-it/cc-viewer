@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4.20 (2026-03-05)
+
+- Fix: `resolveNativePath()` now excludes npm symlinks pointing to `node_modules`, correctly resolving native claude binary
+- Fix: chokidar file watcher no longer starts before PTY is running, preventing `EMFILE: too many open files` crash
+- Fix: chokidar error events now handled gracefully instead of crashing the process
+- Fix: chokidar ignores hidden directories (`.*`) to avoid permission errors on system dirs
+- Fix: `lib/updater.js` package.json path corrected after file relocation to `lib/`
+- Feat: added unit tests for `cli.js`, `lib/plugin-loader.js`, `lib/updater.js`, `lib/stats-worker.js`, `pty-manager.js`, and `server.js` IGNORED_PATTERNS
+
 ## 1.4.19 (2026-03-05)
 
 - Fix: include `workspace-registry.js` in npm package files
