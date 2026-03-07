@@ -1155,7 +1155,7 @@ class ChatView extends React.Component {
           {this.state.fileExplorerOpen && (
             <FileExplorer
               onClose={() => this.setState({ fileExplorerOpen: false })}
-              onFileClick={(path) => this.setState({ currentFile: path })}
+              onFileClick={(path) => this.setState({ currentFile: path, currentGitDiff: null })}
               expandedPaths={this.state.fileExplorerExpandedPaths}
               onToggleExpand={this.handleToggleExpandPath}
               currentFile={this.state.currentFile}

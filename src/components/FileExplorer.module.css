@@ -106,3 +106,7 @@
   font-size: 12px;
   padding: 4px 8px;
 }
+
+.treeItemGitIgnored {
+  opacity: 0.4;
+}

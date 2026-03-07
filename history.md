@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.28 (2026-03-06)
+
+- Feat: move "Workspaces" button from header bar into dropdown menu as "Switch Workspace", shown only in CLI mode
+- Feat: file explorer now shows dot files (`.gitignore`, `.env`, etc.) instead of hiding all files starting with `.`
+- Feat: file explorer now shows `node_modules`, `dist`, `__pycache__` etc. instead of hard-filtering them; gitignored files/dirs are grayed out via `git check-ignore`
+- Feat: file explorer and git changes file viewers are now mutually exclusive — opening one closes the other
+- Feat: increase QR code size from 160px to 200px for easier mobile scanning
+- Chore: remove LAN address printing on server startup
+- Test: update and add unit tests for new `/api/files` behavior (IGNORED_PATTERNS, dot files, gitIgnored flag)
+
 ## 1.4.26 (2026-03-06)
 
 - Test: add comprehensive unit tests for `ccv --uninstall` functionality covering npm mode, native mode, multiple hooks, and user config preservation

@@ -39,6 +39,7 @@ function TreeNode({ item, path, depth, onFileClick, expandedPaths, onToggleExpan
 
   const childPath = path ? `${path}/${item.name}` : item.name;
   const expanded = expandedPaths.has(childPath);
+  const isGitIgnored = item.gitIgnored || false;
 
   const fetchChildren = useCallback(async () => {
     setLoading(true);
@@ -84,7 +85,7 @@ function TreeNode({ item, path, depth, onFileClick, expandedPaths, onToggleExpan
   return (
     <>
       <div
-        className={`${styles.treeItem}${isSelected ? ' ' + styles.treeItemSelected : ''}`}
+        className={`${styles.treeItem}${isSelected ? ' ' + styles.treeItemSelected : ''}${isGitIgnored ? ' ' + styles.treeItemGitIgnored : ''}`}
         style={{ paddingLeft: 8 + depth * 16 }}
         onClick={toggle}
       >

@@ -724,6 +724,26 @@ const i18nData = {
     "tr": "Eklenti yönetimi",
     "uk": "Керування плагінами"
   },
+  "ui.switchWorkspace": {
+    "zh": "切换工作区",
+    "en": "Switch Workspace",
+    "zh-TW": "切換工作區",
+    "ko": "워크스페이스 전환",
+    "ja": "ワークスペース切替",
+    "de": "Arbeitsbereich wechseln",
+    "es": "Cambiar espacio",
+    "fr": "Changer d'espace",
+    "it": "Cambia area",
+    "da": "Skift område",
+    "pl": "Zmień obszar",
+    "ru": "Сменить пространство",
+    "ar": "تبديل المساحة",
+    "no": "Bytt område",
+    "pt-BR": "Trocar área",
+    "th": "สลับเวิร์กสเปซ",
+    "tr": "Alan değiştir",
+    "uk": "Змінити простір"
+  },
   "ui.plugins.empty": {
     "zh": "暂无插件",
     "en": "No plugins installed"

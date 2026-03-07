@@ -223,15 +223,16 @@ describe('server API endpoints', () => {
   });
 
   // --- IGNORED_PATTERNS in /api/files ---
-  it('GET /api/files filters out ignored directories', async () => {
-    // Create a temp workspace with ignored dirs
+  it('GET /api/files filters out system/VCS directories (.git, .DS_Store)', async () => {
     const workspace = mkdtempSync(join(tmpdir(), 'ccv-workspace-'));
-    mkdirSync(join(workspace, 'node_modules'), { recursive: true });
     mkdirSync(join(workspace, '.git'), { recursive: true });
+    mkdirSync(join(workspace, '.svn'), { recursive: true });
+    mkdirSync(join(workspace, '.hg'), { recursive: true });
+    writeFileSync(join(workspace, '.DS_Store'), '');
+    mkdirSync(join(workspace, '.idea'), { recursive: true });
+    mkdirSync(join(workspace, '.vscode'), { recursive: true });
     mkdirSync(join(workspace, 'src'), { recursive: true });
-    writeFileSync(join(workspace, 'src', 'index.js'), 'console.log("test");');
 
-    // Mock CCV_PROJECT_DIR to point to our workspace
     const origCwd = process.env.CCV_PROJECT_DIR;
     process.env.CCV_PROJECT_DIR = workspace;
 
@@ -239,48 +240,84 @@ describe('server API endpoints', () => {
       const res = await httpRequest(port, '/api/files?path=.');
       assert.equal(res.status, 200);
       const data = res.json();
-
-      // Should include 'src' but not 'node_modules' or '.git'
       const names = data.map(item => item.name);
       assert.ok(names.includes('src'), 'should include src');
-      assert.ok(!names.includes('node_modules'), 'should filter out node_modules');
       assert.ok(!names.includes('.git'), 'should filter out .git');
-    } finally {
-      process.env.CCV_PROJECT_DIR = origCwd;
-      rmSync(workspace, { recursive: true, force: true });
-    }
-  });
-
-  it('GET /api/files filters out .DS_Store and __pycache__', async () => {
-    const workspace = mkdtempSync(join(tmpdir(), 'ccv-workspace-'));
-    mkdirSync(join(workspace, '__pycache__'), { recursive: true });
-    writeFileSync(join(workspace, '.DS_Store'), '');
-    writeFileSync(join(workspace, 'main.py'), 'print("hello")');
-
-    const origCwd = process.env.CCV_PROJECT_DIR;
-    process.env.CCV_PROJECT_DIR = workspace;
-
-    try {
-      const res = await httpRequest(port, '/api/files?path=.');
-      assert.equal(res.status, 200);
-      const data = res.json();
-
-      const names = data.map(item => item.name);
-      assert.ok(names.includes('main.py'), 'should include main.py');
-      assert.ok(!names.includes('__pycache__'), 'should filter out __pycache__');
+      assert.ok(!names.includes('.svn'), 'should filter out .svn');
+      assert.ok(!names.includes('.hg'), 'should filter out .hg');
       assert.ok(!names.includes('.DS_Store'), 'should filter out .DS_Store');
+      assert.ok(!names.includes('.idea'), 'should filter out .idea');
+      assert.ok(!names.includes('.vscode'), 'should filter out .vscode');
     } finally {
       process.env.CCV_PROJECT_DIR = origCwd;
       rmSync(workspace, { recursive: true, force: true });
     }
   });
 
-  it('GET /api/files filters out build artifacts (.next, dist, .cache)', async () => {
+  it('GET /api/files shows dot files that are not in IGNORED_PATTERNS', async () => {
     const workspace = mkdtempSync(join(tmpdir(), 'ccv-workspace-'));
-    mkdirSync(join(workspace, '.next'), { recursive: true });
+    writeFileSync(join(workspace, '.gitignore'), 'node_modules\n');
+    writeFileSync(join(workspace, '.env'), 'SECRET=123');
+    writeFileSync(join(workspace, '.eslintrc.js'), 'module.exports = {};');
+    writeFileSync(join(workspace, 'index.js'), '');
+
+    const origCwd = process.env.CCV_PROJECT_DIR;
+    process.env.CCV_PROJECT_DIR = workspace;
+
+    try {
+      const res = await httpRequest(port, '/api/files?path=.');
+      assert.equal(res.status, 200);
+      const data = res.json();
+      const names = data.map(item => item.name);
+      assert.ok(names.includes('.gitignore'), 'should show .gitignore');
+      assert.ok(names.includes('.env'), 'should show .env');
+      assert.ok(names.includes('.eslintrc.js'), 'should show .eslintrc.js');
+      assert.ok(names.includes('index.js'), 'should show index.js');
+    } finally {
+      process.env.CCV_PROJECT_DIR = origCwd;
+      rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it('GET /api/files shows node_modules/dist (no longer hard-filtered)', async () => {
+    const workspace = mkdtempSync(join(tmpdir(), 'ccv-workspace-'));
+    mkdirSync(join(workspace, 'node_modules'), { recursive: true });
     mkdirSync(join(workspace, 'dist'), { recursive: true });
-    mkdirSync(join(workspace, '.cache'), { recursive: true });
-    mkdirSync(join(workspace, 'public'), { recursive: true });
+    mkdirSync(join(workspace, '__pycache__'), { recursive: true });
+    mkdirSync(join(workspace, 'src'), { recursive: true });
+
+    const origCwd = process.env.CCV_PROJECT_DIR;
+    process.env.CCV_PROJECT_DIR = workspace;
+
+    try {
+      const res = await httpRequest(port, '/api/files?path=.');
+      assert.equal(res.status, 200);
+      const data = res.json();
+      const names = data.map(item => item.name);
+      assert.ok(names.includes('node_modules'), 'should show node_modules');
+      assert.ok(names.includes('dist'), 'should show dist');
+      assert.ok(names.includes('__pycache__'), 'should show __pycache__');
+      assert.ok(names.includes('src'), 'should show src');
+    } finally {
+      process.env.CCV_PROJECT_DIR = origCwd;
+      rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it('GET /api/files marks gitignored files with gitIgnored flag in a git repo', async () => {
+    const workspace = mkdtempSync(join(tmpdir(), 'ccv-gitignore-'));
+    // Initialize a git repo
+    const { execSync: exec } = await import('node:child_process');
+    exec('git init', { cwd: workspace, stdio: 'ignore' });
+    exec('git config user.email "test@test.com"', { cwd: workspace, stdio: 'ignore' });
+    exec('git config user.name "test"', { cwd: workspace, stdio: 'ignore' });
+
+    // Create .gitignore and files
+    writeFileSync(join(workspace, '.gitignore'), 'ignored.txt\nbuild/\n');
+    writeFileSync(join(workspace, 'ignored.txt'), 'should be grayed');
+    writeFileSync(join(workspace, 'tracked.txt'), 'should be normal');
+    mkdirSync(join(workspace, 'build'), { recursive: true });
+    mkdirSync(join(workspace, 'src'), { recursive: true });
 
     const origCwd = process.env.CCV_PROJECT_DIR;
     process.env.CCV_PROJECT_DIR = workspace;
@@ -290,11 +327,46 @@ describe('server API endpoints', () => {
       assert.equal(res.status, 200);
       const data = res.json();
 
-      const names = data.map(item => item.name);
-      assert.ok(names.includes('public'), 'should include public');
-      assert.ok(!names.includes('.next'), 'should filter out .next');
-      assert.ok(!names.includes('dist'), 'should filter out dist');
-      assert.ok(!names.includes('.cache'), 'should filter out .cache');
+      const ignoredFile = data.find(i => i.name === 'ignored.txt');
+      assert.ok(ignoredFile, 'ignored.txt should be present');
+      assert.equal(ignoredFile.gitIgnored, true, 'ignored.txt should have gitIgnored flag');
+
+      const buildDir = data.find(i => i.name === 'build');
+      assert.ok(buildDir, 'build/ should be present');
+      assert.equal(buildDir.gitIgnored, true, 'build/ should have gitIgnored flag');
+
+      const trackedFile = data.find(i => i.name === 'tracked.txt');
+      assert.ok(trackedFile, 'tracked.txt should be present');
+      assert.equal(trackedFile.gitIgnored, undefined, 'tracked.txt should NOT have gitIgnored flag');
+
+      const srcDir = data.find(i => i.name === 'src');
+      assert.ok(srcDir, 'src/ should be present');
+      assert.equal(srcDir.gitIgnored, undefined, 'src/ should NOT have gitIgnored flag');
+    } finally {
+      process.env.CCV_PROJECT_DIR = origCwd;
+      rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it('GET /api/files works without gitIgnored when not a git repo', async () => {
+    const workspace = mkdtempSync(join(tmpdir(), 'ccv-nogit-'));
+    writeFileSync(join(workspace, '.gitignore'), 'foo.txt\n');
+    writeFileSync(join(workspace, 'foo.txt'), 'data');
+    writeFileSync(join(workspace, 'bar.txt'), 'data');
+
+    const origCwd = process.env.CCV_PROJECT_DIR;
+    process.env.CCV_PROJECT_DIR = workspace;
+
+    try {
+      const res = await httpRequest(port, '/api/files?path=.');
+      assert.equal(res.status, 200);
+      const data = res.json();
+      const names = data.map(i => i.name);
+      assert.ok(names.includes('foo.txt'), 'should include foo.txt');
+      assert.ok(names.includes('bar.txt'), 'should include bar.txt');
+      // No gitIgnored flags since not a git repo
+      const hasAnyIgnored = data.some(i => i.gitIgnored);
+      assert.equal(hasAnyIgnored, false, 'no items should have gitIgnored outside a git repo');
     } finally {
       process.env.CCV_PROJECT_DIR = origCwd;
       rmSync(workspace, { recursive: true, force: true });

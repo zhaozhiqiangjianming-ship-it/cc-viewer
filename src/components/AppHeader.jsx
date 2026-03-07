@@ -771,6 +771,12 @@ class AppHeader extends React.Component {
         label: t('ui.pluginManagement'),
         onClick: this.handleShowPlugins,
       },
+      ...(cliMode && onReturnToWorkspaces ? [{
+        key: 'switch-workspace',
+        icon: <ImportOutlined style={{ transform: 'scaleX(-1)' }} />,
+        label: t('ui.switchWorkspace'),
+        onClick: onReturnToWorkspaces,
+      }] : []),
       { type: 'divider' },
       {
         key: 'project-stats',
@@ -929,7 +935,7 @@ class AppHeader extends React.Component {
               content={
                 <div className={styles.qrcodePopover}>
                   <div className={styles.qrcodeTitle}>{t('ui.scanToCoding')}</div>
-                  <QRCodeCanvas value={this.state.localUrl} size={160} bgColor="#141414" fgColor="#d9d9d9" level="M" />
+                  <QRCodeCanvas value={this.state.localUrl} size={200} bgColor="#141414" fgColor="#d9d9d9" level="M" />
                   <Input
                     readOnly
                     value={this.state.localUrl}
@@ -960,16 +966,6 @@ class AppHeader extends React.Component {
                 }
               />
             </Popover>
-          )}
-          {cliMode && onReturnToWorkspaces && (
-            <Button
-              type="text"
-              icon={<ImportOutlined style={{ transform: 'scaleX(-1)' }} />}
-              onClick={onReturnToWorkspaces}
-              style={{ color: '#888' }}
-            >
-              {t('ui.workspaces.backToList')}
-            </Button>
           )}
           {cliMode && viewMode === 'chat' && (
             <Button

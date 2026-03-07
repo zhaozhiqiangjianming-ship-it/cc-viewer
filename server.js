@@ -17,11 +17,10 @@ const PREFS_FILE = join(LOG_DIR, 'preferences.json');
 const isCliMode = process.env.CCV_CLI_MODE === '1';
 const isWorkspaceMode = process.env.CCV_WORKSPACE_MODE === '1';
 
-// 统一的文件/目录忽略规则
+// 统一的文件/目录忽略规则（仅隐藏系统和版本控制目录）
 const IGNORED_PATTERNS = new Set([
-  'node_modules', '.git', '.svn', '.hg', '.DS_Store',
-  '__pycache__', '.next', '.nuxt', 'dist',
-  '.cache', '.idea', '.vscode'
+  '.git', '.svn', '.hg', '.DS_Store',
+  '.idea', '.vscode'
 ]);
 
 // 工作区模式：保存 Claude 额外参数，供 launch API 使用
@@ -723,14 +722,37 @@ async function handleRequest(req, res) {
     try {
       const entries = readdirSync(targetDir, { withFileTypes: true });
       const items = entries
-        .filter(e => !e.name.startsWith('.') && !IGNORED_PATTERNS.has(e.name))
+        .filter(e => !IGNORED_PATTERNS.has(e.name))
         .map(e => ({ name: e.name, type: e.isDirectory() ? 'directory' : 'file' }))
         .sort((a, b) => {
           if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
           return a.name.localeCompare(b.name);
         });
+      // 使用 git check-ignore 批量检测被 .gitignore 忽略的文件
+      let gitIgnoredSet = new Set();
+      try {
+        const names = items.map(i => {
+          const rel = reqPath === '.' ? i.name : `${reqPath}/${i.name}`;
+          return i.type === 'directory' ? `${rel}/` : rel;
+        });
+        if (names.length > 0) {
+          const result = execSync(`git check-ignore --stdin`, {
+            cwd,
+            input: names.join('\n'),
+            encoding: 'utf-8',
+            timeout: 3000,
+            stdio: ['pipe', 'pipe', 'pipe'],
+          });
+          result.split('\n').filter(Boolean).forEach(line => {
+            const name = line.endsWith('/') ? line.slice(0, -1) : line;
+            const baseName = name.includes('/') ? name.split('/').pop() : name;
+            gitIgnoredSet.add(baseName);
+          });
+        }
+      } catch { /* git 未安装或非 git 仓库，忽略 */ }
+      const result = items.map(i => gitIgnoredSet.has(i.name) ? { ...i, gitIgnored: true } : i);
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(items));
+      res.end(JSON.stringify(result));
     } catch (err) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Directory not found' }));
