@@ -1,6 +1,6 @@
 import React from 'react';
-import { ConfigProvider, Layout, theme, Modal, List, Tag, Spin, Button, Checkbox, Badge, message } from 'antd';
-import { FileTextOutlined, UploadOutlined, MessageOutlined, BranchesOutlined } from '@ant-design/icons';
+import { ConfigProvider, Layout, theme, Modal, Table, Tag, Spin, Button, Checkbox, Badge, Switch, message } from 'antd';
+import { UploadOutlined, MessageOutlined, BranchesOutlined, DownloadOutlined, DeleteOutlined } from '@ant-design/icons';
 import { isMobile } from './env';
 import AppHeader from './components/AppHeader';
 import RequestList from './components/RequestList';
@@ -58,6 +58,8 @@ class App extends React.Component {
       terminalVisible: true,
       workspaceMode: false,
       mobileMenuVisible: false,
+      mobileLogMgmtVisible: false,
+      mobileSettingsVisible: false,
     };
     this.eventSource = null;
     this._autoSelectTimer = null;
@@ -734,6 +736,79 @@ class App extends React.Component {
     this.setState({ importModalVisible: false, selectedLogs: new Set() });
   };
 
+  renderLogTable(logs, mobile) {
+    const columns = [
+      {
+        title: '',
+        dataIndex: 'file',
+        key: 'check',
+        width: 40,
+        fixed: mobile ? 'left' : false,
+        render: (file) => (
+          <Checkbox
+            checked={this.state.selectedLogs.has(file) || false}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => { e.stopPropagation(); this.handleToggleLogSelect(file, e.target.checked); }}
+          />
+        ),
+      },
+      {
+        title: t('ui.logTime'),
+        dataIndex: 'timestamp',
+        key: 'time',
+        width: mobile ? 150 : undefined,
+        render: (ts) => <span style={{ whiteSpace: 'nowrap' }}>{this.formatTimestamp(ts)}</span>,
+      },
+      ...(!mobile ? [{
+        title: t('ui.logTurns'),
+        dataIndex: 'turns',
+        key: 'turns',
+        width: 80,
+        render: (v) => <Tag style={{ background: '#0a0a0a', border: '1px solid #444', color: '#999' }}>{v || 0}</Tag>,
+      }] : []),
+      {
+        title: t('ui.logSize'),
+        dataIndex: 'size',
+        key: 'size',
+        width: 90,
+        render: (v) => <Tag style={{ background: '#0a0a0a', border: '1px solid #444', color: '#999' }}>{this.formatSize(v)}</Tag>,
+      },
+      {
+        title: t('ui.logActions'),
+        key: 'actions',
+        width: mobile ? 160 : 180,
+        render: (_, log) => (
+          <span style={{ display: 'flex', gap: 4 }}>
+            <Button size="small" type="primary" onClick={(e) => { e.stopPropagation(); this.handleOpenLogFile(log.file); }}>
+              {t('ui.openLog')}
+            </Button>
+            <Button size="small" icon={<DownloadOutlined />} onClick={(e) => { e.stopPropagation(); this.handleDownloadLogFile(log.file); }}>
+              {t('ui.downloadLog')}
+            </Button>
+          </span>
+        ),
+      },
+    ];
+
+    return (
+      <Table
+        size="small"
+        dataSource={logs}
+        columns={columns}
+        rowKey="file"
+        pagination={false}
+        scroll={mobile ? { x: 'max-content', y: 'calc(100vh - 160px)' } : { y: 400 }}
+        onRow={(log) => ({
+          onClick: () => {
+            const checked = !this.state.selectedLogs.has(log.file);
+            this.handleToggleLogSelect(log.file, checked);
+          },
+          style: { cursor: 'pointer' },
+        })}
+      />
+    );
+  }
+
   handleToggleLogSelect = (file, checked) => {
     this.setState(prev => {
       const selectedLogs = new Set(prev.selectedLogs);
@@ -799,6 +874,39 @@ class App extends React.Component {
       .catch(() => message.error('Merge failed'));
   };
 
+  handleDeleteLogs = () => {
+    const { selectedLogs } = this.state;
+    if (selectedLogs.size === 0) return;
+
+    Modal.confirm({
+      title: t('ui.deleteLogs'),
+      content: t('ui.deleteLogsConfirm', { count: selectedLogs.size }),
+      okText: t('ui.deleteLogs'),
+      okButtonProps: { danger: true },
+      cancelText: t('ui.cancel'),
+      onOk: () => {
+        const files = [...selectedLogs];
+        fetch(apiUrl('/api/delete-logs'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ files }),
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.results) {
+              const deleted = data.results.filter(r => r.ok).length;
+              const failed = data.results.filter(r => r.error).length;
+              if (deleted > 0) message.success(t('ui.deleteSuccess', { count: deleted }));
+              if (failed > 0) message.error(t('ui.deleteFailed', { count: failed }));
+              this.setState({ selectedLogs: new Set() });
+              this.handleImportLocalLogs();
+            }
+          })
+          .catch(() => message.error('Delete failed'));
+      },
+    });
+  };
+
   handleOpenLogFile = (file) => {
     // 在新窗口打开日志文件，避免覆盖当前监控窗口
     const port = window.location.port || window.location.host.split(':')[1] || '7008';
@@ -807,6 +915,16 @@ class App extends React.Component {
     const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
     window.open(`${window.location.protocol}//${window.location.hostname}:${port}?logfile=${encodeURIComponent(file)}${tokenParam}`, '_blank');
     this.setState({ importModalVisible: false });
+  };
+
+  handleDownloadLogFile = (file) => {
+    const url = apiUrl(`/api/download-log?file=${encodeURIComponent(file)}`);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   handleResumeChoice = (choice) => {
@@ -937,7 +1055,7 @@ class App extends React.Component {
                 type="text"
                 size="small"
                 icon={<BranchesOutlined />}
-                onClick={() => this.setState(prev => ({ mobileGitDiffVisible: !prev.mobileGitDiffVisible, mobileChatVisible: false, mobileStatsVisible: false }))}
+                onClick={() => this.setState(prev => ({ mobileGitDiffVisible: !prev.mobileGitDiffVisible, mobileChatVisible: false, mobileStatsVisible: false, mobileLogMgmtVisible: false, mobileSettingsVisible: false }))}
                 style={{ color: this.state.mobileGitDiffVisible ? '#fff' : '#888', fontSize: 12 }}
               >
                 {this.state.mobileGitDiffVisible ? t('ui.mobileGitDiffExit') : t('ui.mobileGitDiffBrowse')}
@@ -947,7 +1065,7 @@ class App extends React.Component {
                   type="text"
                   size="small"
                   icon={<MessageOutlined />}
-                  onClick={() => this.setState(prev => ({ mobileChatVisible: !prev.mobileChatVisible, mobileGitDiffVisible: false, mobileStatsVisible: false }))}
+                  onClick={() => this.setState(prev => ({ mobileChatVisible: !prev.mobileChatVisible, mobileGitDiffVisible: false, mobileStatsVisible: false, mobileLogMgmtVisible: false, mobileSettingsVisible: false }))}
                   style={{ color: this.state.mobileChatVisible ? '#fff' : '#888', fontSize: 12 }}
                 >
                   {this.state.mobileChatVisible ? t('ui.mobileChatExit') : t('ui.mobileChatBrowse')}
@@ -960,7 +1078,7 @@ class App extends React.Component {
                 <div className={styles.mobileMenuDropdown}>
                   <button
                     className={styles.mobileMenuItem}
-                    onClick={() => { this.setState({ mobileMenuVisible: false }); this.handleImportLocalLogs(); }}
+                    onClick={() => { this.setState({ mobileMenuVisible: false, mobileLogMgmtVisible: true, mobileStatsVisible: false, mobileGitDiffVisible: false, mobileChatVisible: false, mobileSettingsVisible: false }); this.handleImportLocalLogs(); }}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -972,7 +1090,7 @@ class App extends React.Component {
                   </button>
                   <button
                     className={styles.mobileMenuItem}
-                    onClick={() => { this.setState({ mobileMenuVisible: false, mobileStatsVisible: true, mobileGitDiffVisible: false, mobileChatVisible: false }); }}
+                    onClick={() => { this.setState({ mobileMenuVisible: false, mobileStatsVisible: true, mobileGitDiffVisible: false, mobileChatVisible: false, mobileLogMgmtVisible: false, mobileSettingsVisible: false }); }}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="3" y="3" width="7" height="7" />
@@ -981,6 +1099,16 @@ class App extends React.Component {
                       <rect x="14" y="14" width="7" height="7" />
                     </svg>
                     {t('ui.tokenStats')}
+                  </button>
+                  <button
+                    className={styles.mobileMenuItem}
+                    onClick={() => { this.setState({ mobileMenuVisible: false, mobileSettingsVisible: true, mobileStatsVisible: false, mobileGitDiffVisible: false, mobileChatVisible: false, mobileLogMgmtVisible: false }); }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                    {t('ui.settings')}
                   </button>
                 </div>
               </>
@@ -1026,80 +1154,87 @@ class App extends React.Component {
                 />
               </div>
             </div>
-          </div>
-          <ConfigProvider theme={{ algorithm: theme.darkAlgorithm, token: { colorBgContainer: '#111', colorBgLayout: '#0a0a0a', colorBgElevated: '#1a1a1a', colorBorder: '#2a2a2a' } }}>
-            <Modal
-              title={t('ui.importLocalLogs')}
-              open={this.state.importModalVisible}
-              onCancel={this.handleCloseImportModal}
-              footer={null}
-              width="95vw"
-              styles={{ body: { maxHeight: '60vh', overflow: 'auto' } }}
-            >
-              <div className={styles.modalActions}>
+            <div className={`${styles.mobileLogMgmtOverlay} ${this.state.mobileLogMgmtVisible ? styles.mobileLogMgmtOverlayVisible : ''}`}>
+              <div className={styles.mobileLogMgmtHeader}>
+                <span className={styles.mobileLogMgmtTitle}>{t('ui.importLocalLogs')}</span>
+                <button className={styles.mobileLogMgmtClose} onClick={() => this.setState({ mobileLogMgmtVisible: false, selectedLogs: new Set() })}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+              <div className={styles.mobileLogMgmtActions}>
                 <Button
                   size="small"
-                  type={this.state.selectedLogs.size > 1 ? 'primary' : 'default'}
+                  type={this.state.selectedLogs.size >= 2 ? 'primary' : 'default'}
                   disabled={this.state.selectedLogs.size < 2}
                   onClick={this.handleMergeLogs}
+                  style={this.state.selectedLogs.size < 2 ? { color: '#666', borderColor: '#333' } : undefined}
                 >
                   {t('ui.mergeLogs')}
                 </Button>
+                <Button
+                  size="small"
+                  icon={<DeleteOutlined />}
+                  disabled={this.state.selectedLogs.size === 0}
+                  onClick={this.handleDeleteLogs}
+                  style={this.state.selectedLogs.size === 0 ? { color: '#666', borderColor: '#333' } : { color: '#ff4d4f', borderColor: '#ff4d4f' }}
+                >
+                  {t('ui.deleteLogs')}
+                </Button>
               </div>
-              {this.state.localLogsLoading ? (
-                <div className={styles.spinCenter}><Spin /></div>
-              ) : (() => {
-                const currentLogs = this.state.localLogs[this.state.currentProject];
-                if (!currentLogs || currentLogs.length === 0) {
+              <div className={styles.mobileLogMgmtBody}>
+                {this.state.localLogsLoading ? (
+                  <div className={styles.spinCenter}><Spin /></div>
+                ) : (() => {
+                  const currentLogs = this.state.localLogs[this.state.currentProject];
+                  if (!currentLogs || currentLogs.length === 0) {
+                    return (
+                      <div className={styles.emptyCenter}>
+                        {t('ui.noLogs')}
+                      </div>
+                    );
+                  }
                   return (
-                    <div className={styles.emptyCenter}>
-                      {t('ui.noLogs')}
+                    <ConfigProvider theme={{ algorithm: theme.darkAlgorithm, token: { colorBgContainer: '#111', colorBgLayout: '#0a0a0a', colorBgElevated: '#1a1a1a', colorBorder: '#2a2a2a' } }}>
+                    <div className={styles.logListContainer}>
+                      {this.renderLogTable(currentLogs, true)}
                     </div>
+                    </ConfigProvider>
                   );
-                }
-                return (
-                  <div className={styles.logListContainer}>
-                    <List
-                      size="small"
-                      dataSource={currentLogs}
-                      renderItem={(log) => (
-                      <List.Item
-                        className={styles.logListItem}
-                        onClick={() => {
-                          const checked = !this.state.selectedLogs.has(log.file);
-                          this.handleToggleLogSelect(log.file, checked);
-                        }}
-                      >
-                        <div className={styles.logItemRow}>
-                          <span>
-                            <Checkbox
-                              className={styles.logCheckbox}
-                              checked={this.state.selectedLogs.has(log.file) || false}
-                              onClick={(e) => e.stopPropagation()}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                this.handleToggleLogSelect(log.file, e.target.checked);
-                              }}
-                            />
-                            <FileTextOutlined className={styles.logFileIcon} />
-                            <span className={styles.logFileName}>{this.formatTimestamp(log.timestamp)}</span>
-                          </span>
-                          <span>
-                            <Tag style={{ background: '#0a0a0a', border: '1px solid #444', color: '#999' }}>{log.turns || 0} {t('ui.turns')}</Tag>
-                            <Tag style={{ background: '#0a0a0a', border: '1px solid #444', color: '#999' }}>{this.formatSize(log.size)}</Tag>
-                            <Button size="small" type="primary" onClick={(e) => { e.stopPropagation(); this.handleOpenLogFile(log.file); }}>
-                              {t('ui.openLog')}
-                            </Button>
-                          </span>
-                        </div>
-                      </List.Item>
-                    )}
+                })()}
+              </div>
+            </div>
+            <div className={`${styles.mobileSettingsOverlay} ${this.state.mobileSettingsVisible ? styles.mobileSettingsOverlayVisible : ''}`}>
+              <div className={styles.mobileLogMgmtHeader}>
+                <span className={styles.mobileLogMgmtTitle}>{t('ui.settings')}</span>
+                <button className={styles.mobileLogMgmtClose} onClick={() => this.setState({ mobileSettingsVisible: false })}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+              <div style={{ padding: '12px 16px' }}>
+                <div style={{ fontSize: 13, color: '#888', fontWeight: 500, marginBottom: 12 }}>{t('ui.chatDisplaySwitches')}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #222' }}>
+                  <span style={{ color: '#ccc', fontSize: 14 }}>{t('ui.collapseToolResults')}</span>
+                  <Switch
+                    checked={!!this.state.collapseToolResults}
+                    onChange={this.handleCollapseToolResultsChange}
                   />
-                  </div>
-                );
-              })()}
-            </Modal>
-          </ConfigProvider>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #222' }}>
+                  <span style={{ color: '#ccc', fontSize: 14 }}>{t('ui.expandThinking')}</span>
+                  <Switch
+                    checked={!!this.state.expandThinking}
+                    onChange={this.handleExpandThinkingChange}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       );
     }
@@ -1262,7 +1397,7 @@ class App extends React.Component {
           onCancel={this.handleCloseImportModal}
           footer={null}
           width={1000}
-          styles={{ body: { maxHeight: '60vh', overflow: 'auto' } }}
+          styles={{ body: { overflow: 'hidden' } }}
         >
           <div className={styles.modalActions}>
             <Button icon={<UploadOutlined />} onClick={this.handleLoadLocalJsonlFile}>
@@ -1276,6 +1411,16 @@ class App extends React.Component {
               style={{ marginLeft: 8 }}
             >
               {t('ui.mergeLogs')}
+            </Button>
+            <Button
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              disabled={this.state.selectedLogs.size === 0}
+              onClick={this.handleDeleteLogs}
+              style={{ marginLeft: 8 }}
+            >
+              {t('ui.deleteLogs')}
             </Button>
           </div>
           {this.state.localLogsLoading ? (
@@ -1291,42 +1436,7 @@ class App extends React.Component {
             }
             return (
               <div className={styles.logListContainer}>
-                <List
-                  size="small"
-                  dataSource={currentLogs}
-                  renderItem={(log) => (
-                  <List.Item
-                    className={styles.logListItem}
-                    onClick={() => {
-                      const checked = !this.state.selectedLogs.has(log.file);
-                      this.handleToggleLogSelect(log.file, checked);
-                    }}
-                  >
-                    <div className={styles.logItemRow}>
-                      <span>
-                        <Checkbox
-                          className={styles.logCheckbox}
-                          checked={this.state.selectedLogs.has(log.file) || false}
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            this.handleToggleLogSelect(log.file, e.target.checked);
-                          }}
-                        />
-                        <FileTextOutlined className={styles.logFileIcon} />
-                        <span className={styles.logFileName}>{this.formatTimestamp(log.timestamp)}</span>
-                      </span>
-                      <span>
-                        <Tag style={{ background: '#0a0a0a', border: '1px solid #444', color: '#999' }}>{log.turns || 0} {t('ui.turns')}</Tag>
-                        <Tag style={{ background: '#0a0a0a', border: '1px solid #444', color: '#999' }}>{this.formatSize(log.size)}</Tag>
-                        <Button size="small" type="primary" onClick={(e) => { e.stopPropagation(); this.handleOpenLogFile(log.file); }}>
-                          {t('ui.openLog')}
-                        </Button>
-                      </span>
-                    </div>
-                  </List.Item>
-                )}
-              />
+                {this.renderLogTable(currentLogs, false)}
               </div>
             );
           })()}

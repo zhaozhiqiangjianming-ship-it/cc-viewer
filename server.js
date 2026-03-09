@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { createConnection } from 'node:net';
 import { randomBytes } from 'node:crypto';
-import { readFileSync, writeFileSync, existsSync, watchFile, unwatchFile, statSync, readdirSync, renameSync, unlinkSync, openSync, readSync, closeSync, realpathSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, watchFile, unwatchFile, statSync, readdirSync, renameSync, unlinkSync, openSync, readSync, closeSync, realpathSync, mkdirSync, createReadStream } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, extname } from 'node:path';
 import { homedir, userInfo, platform, networkInterfaces } from 'node:os';
@@ -1141,6 +1141,49 @@ async function handleRequest(req, res) {
     return;
   }
 
+  // 下载指定本地日志文件（原始 JSONL 格式）
+  if (url === '/api/download-log' && method === 'GET') {
+    const file = parsedUrl.searchParams.get('file');
+    if (!file || file.includes('..')) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Invalid file name' }));
+      return;
+    }
+    if (!file.endsWith('.jsonl')) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Invalid file type' }));
+      return;
+    }
+    const filePath = join(LOG_DIR, file);
+    try {
+      if (!existsSync(filePath)) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'File not found' }));
+        return;
+      }
+      const realPath = realpathSync(filePath);
+      const realLogDir = realpathSync(LOG_DIR);
+      if (!realPath.startsWith(realLogDir)) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Access denied' }));
+        return;
+      }
+      const fileName = file.split('/').pop();
+      const stat = statSync(realPath);
+      res.writeHead(200, {
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
+        'Content-Length': stat.size,
+      });
+      const stream = createReadStream(realPath);
+      stream.pipe(res);
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
   // 读取指定本地日志文件（支持 project/file 路径）
   if (url === '/api/local-log' && method === 'GET') {
     const file = parsedUrl.searchParams.get('file');
@@ -1184,6 +1227,52 @@ async function handleRequest(req, res) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: err.message }));
     }
+    return;
+  }
+
+  // 删除日志文件
+  if (url === '/api/delete-logs' && method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      try {
+        const { files } = JSON.parse(body);
+        if (!Array.isArray(files) || files.length === 0) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'No files specified' }));
+          return;
+        }
+        const results = [];
+        for (const file of files) {
+          if (!file || file.includes('..') || !file.endsWith('.jsonl')) {
+            results.push({ file, error: 'Invalid file name' });
+            continue;
+          }
+          const filePath = join(LOG_DIR, file);
+          try {
+            if (!existsSync(filePath)) {
+              results.push({ file, error: 'Not found' });
+              continue;
+            }
+            const realPath = realpathSync(filePath);
+            const realLogDir = realpathSync(LOG_DIR);
+            if (!realPath.startsWith(realLogDir)) {
+              results.push({ file, error: 'Access denied' });
+              continue;
+            }
+            unlinkSync(realPath);
+            results.push({ file, ok: true });
+          } catch (err) {
+            results.push({ file, error: err.message });
+          }
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ results }));
+      } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid JSON' }));
+      }
+    });
     return;
   }
 

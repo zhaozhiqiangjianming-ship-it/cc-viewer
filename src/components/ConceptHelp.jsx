@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { Modal, Spin } from 'antd';
+import { Modal, Spin, ConfigProvider, theme } from 'antd';
 import { renderMarkdown } from '../utils/markdown';
 import { getLang } from '../i18n';
+import { isMobile } from '../env';
 import styles from './ConceptHelp.module.css';
 
 const KNOWN_DOCS = new Set([
@@ -51,28 +52,35 @@ export default function ConceptHelp({ doc }) {
     setLoading(false);
   }, [doc]);
 
+  const modalStyles = isMobile ? {
+    header: { padding: '8px 12px', margin: 0 },
+    body: { maxHeight: '80vh', overflow: 'auto', padding: '8px 10px' },
+    content: { padding: 0 },
+  } : {
+    body: { padding: '16px 24px 24px' },
+    content: { padding: '12px 20px' },
+  };
+
   return (
     <>
       <span className={styles.helpBtn} onClick={(e) => { e.stopPropagation(); loadDoc(); }}>?</span>
-      <Modal
-        title={title}
-        open={open}
-        onCancel={() => setOpen(false)}
-        footer={null}
-        width={640}
-        styles={{
-          header: { background: '#1a1a1a', color: '#fff' },
-          body: { background: '#111', padding: '16px 24px 24px' },
-          content: { background: '#1a1a1a', padding: '12px 20px' },
-          close: { color: '#fff' },
-        }}
-      >
-        {loading ? (
-          <div className={styles.spinWrap}><Spin /></div>
-        ) : (
-          <div className={styles.modalBody} dangerouslySetInnerHTML={{ __html: html }} />
-        )}
-      </Modal>
+      <ConfigProvider theme={{ algorithm: theme.darkAlgorithm, token: { colorBgContainer: '#111', colorBgLayout: '#0a0a0a', colorBgElevated: '#1a1a1a', colorBorder: '#2a2a2a' } }}>
+        <Modal
+          title={title}
+          open={open}
+          onCancel={() => setOpen(false)}
+          footer={null}
+          width={isMobile ? '98vw' : 640}
+          centered={isMobile}
+          styles={modalStyles}
+        >
+          {loading ? (
+            <div className={styles.spinWrap}><Spin /></div>
+          ) : (
+            <div className={styles.modalBody} dangerouslySetInnerHTML={{ __html: html }} />
+          )}
+        </Modal>
+      </ConfigProvider>
     </>
   );
 }

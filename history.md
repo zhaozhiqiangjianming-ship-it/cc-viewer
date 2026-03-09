@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.5.5 (2026-03-09)
+
+- Feat: download log file — new download button per log entry, streams raw JSONL via `/api/download-log`
+- Feat: delete logs — bulk delete selected logs with confirmation dialog via `/api/delete-logs`
+- Feat: log list upgraded from List to Table component with sortable columns (time, turns, size, actions)
+- Feat: mobile display settings — collapseToolResults and expandThinking switches now accessible from mobile menu
+- Improve: mobile log management — converted from Modal to left-slide-in panel, consistent with stats overlay
+- Improve: mobile button styling — inactive buttons use gray outline, merge=blue/delete=red when active
+- Fix: ConceptHelp modal — use ConfigProvider darkAlgorithm instead of manual color hacks; fixes black title and misaligned close button on mobile
+- Fix: ConceptHelp horizontal scrollbar on mobile — add box-sizing:border-box to textarea/pre, overflow-x:hidden to modalBody
+- Fix: PC log modal double scroll — changed Modal body to overflow:hidden to avoid conflict with Table scroll
+- i18n: added downloadLog, deleteLogs, deleteLogsConfirm, deleteSuccess, deleteFailed, cancel, logTime, logSize, logTurns, logActions across all 18 languages
+
 ## 1.5.4 (2026-03-09)
 
 - Fix: proxy stream error handler — add persistent error listener to prevent late-arriving errors from crashing the process
