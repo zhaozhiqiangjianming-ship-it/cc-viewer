@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.8 (2026-03-09)
+
+- Feat: mobile chat list performance optimization — limit rendering to last 300 items with "load more" button (loads 100 at a time), prevents UI lag with 500+ messages
+- Feat: incremental SSE loading — client sends cached metadata (since/cc) to server, receives only delta entries instead of full reload
+- Improve: silent incremental updates — no loading overlay when cache exists, seamless merge of new data
+- Improve: mobile "stick to bottom" button — 2x larger size (120px height, 24px font) for better touch targets
+- i18n: add "ui.loadMoreHistory" with {count} placeholder across 17 languages
+
 ## 1.5.7 (2026-03-09)
 
 - Fix: mobile virtual keyboard no longer pops up when pressing virtual keys (arrows, enter, etc.) — uses preventDefault on touchstart and blur after key send, while preserving normal text input focus
