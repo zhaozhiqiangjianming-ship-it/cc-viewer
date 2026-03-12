@@ -13,11 +13,11 @@ function resolveLogDir() {
   const envDir = process.env.CCV_LOG_DIR;
   if (typeof envDir === 'string' && envDir.trim()) {
     const raw = envDir.trim();
+    if (raw === 'tmp' || raw === 'temp') {
+      return join(tmpdir(), 'cc-viewer-test', `${process.pid}-${threadId}`);
+    }
     const expanded = raw.startsWith('~/') ? join(homedir(), raw.slice(2)) : raw;
     return resolve(expanded);
-  }
-  if (process.argv.includes('--test')) {
-    return join(tmpdir(), 'cc-viewer-test', `${process.pid}-${threadId}`);
   }
   return join(homedir(), '.claude', 'cc-viewer');
 }

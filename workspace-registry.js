@@ -14,15 +14,32 @@ function sleep(ms) {
 function withLock(fn) {
   mkdirSync(LOG_DIR, { recursive: true });
   const deadline = Date.now() + 2000;
+  // 如果锁文件超过 5 秒未更新，认为它是死锁（前一个进程崩溃）
+  const STALE_THRESHOLD = 5000;
+
   while (true) {
     try {
       const fd = openSync(LOCK_FILE, 'wx');
       closeSync(fd);
       break;
     } catch (err) {
-      if (err?.code === 'EEXIST' && Date.now() < deadline) {
-        sleep(25);
-        continue;
+      if (err?.code === 'EEXIST') {
+        if (Date.now() < deadline) {
+          // 检查是否为陈旧锁
+          try {
+            const stats = statSync(LOCK_FILE);
+            if (Date.now() - stats.mtimeMs > STALE_THRESHOLD) {
+              // 尝试强制移除锁
+              try { unlinkSync(LOCK_FILE); } catch { }
+              // 立即重试获取
+              continue;
+            }
+          } catch {
+            // stat 失败可能意味着锁刚被释放，继续循环尝试获取
+          }
+          sleep(25);
+          continue;
+        }
       }
       throw err;
     }
