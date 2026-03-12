@@ -399,7 +399,7 @@ describe('arg parsing', () => {
     const r = runCli(['--help']);
     assert.equal(r.exitCode, 0);
     assert.ok(r.stdout.includes('-logger'), 'help should mention -logger');
-    assert.ok(r.stdout.includes('passed through') || r.stdout.includes('passed\nthrough'), 'help should mention passthrough');
+    assert.ok(r.stdout.includes('passed through') || r.stdout.includes('passed\nthrough') || r.stdout.includes('透传') || r.stdout.includes('透傳'), 'help should mention passthrough');
     // Old -d/-c flags should no longer appear as ccv options
     assert.ok(!r.stdout.includes('-d [path]'), 'help should not mention old -d [path]');
     assert.ok(!r.stdout.includes('-c [path]'), 'help should not mention old -c [path]');
