@@ -32,7 +32,7 @@ function writePrefs(obj) {
 
 function cleanup() {
   for (const f of createdFiles) {
-    try { rmSync(f, { force: true }); } catch {}
+    try { rmSync(f, { force: true }); } catch { }
   }
   createdFiles = [];
   if (savedPrefs !== null) {
