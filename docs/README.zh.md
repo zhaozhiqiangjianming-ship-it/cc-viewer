@@ -45,6 +45,7 @@ ccv -d
 ⚠️如果你仍然习惯使用claude 原生工具，或者VS code插件，请使用该模式
 这个模式下面启动claude 或者 claude --dangerously-skip-permissions 会自动启动一个日志进程帮忙记录请求报文
 
+启动日志模式：
 ```bash
 ccv
 ```
@@ -57,6 +58,11 @@ ccv
 - **Native Install**：自动检测 `claude` 二进制文件，配置本地透明代理，并设置 Zsh Shell Hook 自动转发流量。
 - 本项目更推荐使用npm方式安装的claude code。
 
+卸载日志模式：
+```bash
+ccv --uninstall
+```
+
 ### 常见问题排查 (Troubleshooting)
 
 如果你遇到无法启动的问题，有一个终极排查方案：
@@ -68,12 +74,6 @@ ccv
 让Claude Code自己检查错误是比咨询任何人以及看任何文档更有效的手段！
 
 以上指令完成后，会更新findcc.js。如果你的项目工程经常需要本地部署。或者fork出去的代码要经常解决安装问题，保留这个文件就可以。下次直接copy 文件。现阶段很多项目和公司用claude code都不是mac部署，而是服务端托管部署，所以作者剥离了findcc.js 这个文件，方便后续跟踪cc-viewer的源代码更新。
-
-### 日志模式的卸载
-
-```bash
-ccv --uninstall
-```
 
 ### 其他辅助指令
 
