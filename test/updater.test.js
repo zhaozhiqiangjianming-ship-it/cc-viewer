@@ -232,7 +232,7 @@ describe('version comparison logic (indirect)', () => {
     return execFileSync(process.execPath, ['-e', script], {
       encoding: 'utf-8',
       timeout: 5000,
-    }).trim();
+    }).trim().replace(/\x1b\[[0-9;]*m/g, '');
   }
 
   it('parseVersion splits correctly', () => {
