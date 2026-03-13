@@ -43,6 +43,17 @@ const PREFS_FILE = join(LOG_DIR, 'preferences.json');
 const isCliMode = process.env.CCV_CLI_MODE === '1';
 const isWorkspaceMode = process.env.CCV_WORKSPACE_MODE === '1';
 
+let _cachedPtyModule = null;
+async function getClaudePid() {
+  if (isCliMode || isWorkspaceMode) {
+    if (!_cachedPtyModule) {
+      _cachedPtyModule = await import('./pty-manager.js');
+    }
+    return _cachedPtyModule.getClaudePid() || process.pid;
+  }
+  return process.pid;
+}
+
 // 统一的文件/目录忽略规则（仅隐藏系统和版本控制目录）
 const IGNORED_PATTERNS = new Set([
   '.git', '.svn', '.hg', '.DS_Store',
@@ -202,7 +213,7 @@ function watchLogFile(logFile) {
   if (watchedFiles.has(logFile)) return;
   let lastSize = 0;
   watchedFiles.set(logFile, true);
-  watchFile(logFile, { interval: 500 }, () => {
+  watchFile(logFile, { interval: 500 }, async () => {
     try {
       const content = readFileSync(logFile, 'utf-8');
       const newContent = content.slice(lastSize);
@@ -210,11 +221,12 @@ function watchLogFile(logFile) {
 
       if (newContent.trim()) {
         const entries = newContent.split('\n---\n').filter(line => line.trim());
+        const claudePid = await getClaudePid();
         entries.forEach(entry => {
           try {
             const parsed = JSON.parse(entry);
             sendToClients(parsed);
-            runParallelHook('onNewEntry', parsed).catch(() => {});
+            runParallelHook('onNewEntry', { ...parsed, pid: claudePid }).catch(() => {});
           } catch (err) {
             // Skip invalid entries
           }
@@ -1697,7 +1709,7 @@ export async function startViewer() {
           currentServer = createServer(handleRequest);
         }
 
-        currentServer.listen(port, HOST, () => {
+        currentServer.listen(port, HOST, async () => {
           server = currentServer;
           actualPort = port;
           const url = `${serverProtocol}://127.0.0.1:${port}`;
@@ -1722,7 +1734,8 @@ export async function startViewer() {
             setupTerminalWebSocket(currentServer);
           }
           // 通知插件服务器已启动
-          runParallelHook('serverStarted', { port, host: HOST, url, ip: getLocalIp(), token: ACCESS_TOKEN, protocol: serverProtocol })
+          const claudePid = await getClaudePid().catch(() => process.pid);
+          runParallelHook('serverStarted', { port, host: HOST, url, ip: getLocalIp(), token: ACCESS_TOKEN, protocol: serverProtocol, pid: claudePid })
             .catch(err => console.error('[CC Viewer] Plugin serverStarted hook error:', err.message));
           resolve(server);
         });
@@ -2019,6 +2032,10 @@ export function getProtocol() {
   return serverProtocol;
 }
 
+export function isServerRunning() {
+  return !!server;
+}
+
 let _stoppingPromise = null;
 export function stopViewer() {
   if (_stoppingPromise) return _stoppingPromise;
@@ -2026,7 +2043,7 @@ export function stopViewer() {
   return _stoppingPromise;
 }
 async function _doStop() {
-  try { await Promise.race([runParallelHook('serverStopping'), new Promise(r => setTimeout(r, 3000))]); } catch { }
+  try { await Promise.race([runParallelHook('serverStopping', { pid: await getClaudePid() }), new Promise(r => setTimeout(r, 3000))]); } catch { }
   // 如果用户未做选择，将临时文件转为正式文件
   if (_resumeState && _resumeState.tempFile) {
     try {
@@ -2045,6 +2062,7 @@ async function _doStop() {
   clients = [];
   if (server) {
     server.close();
+    server = null;
   }
   if (statsWorker) {
     statsWorker.terminate();

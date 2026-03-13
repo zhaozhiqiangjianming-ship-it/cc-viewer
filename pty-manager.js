@@ -286,6 +286,10 @@ export function getCurrentWorkspace() {
   };
 }
 
+export function getClaudePid() {
+  return ptyProcess?.pid ?? null;
+}
+
 export function getOutputBuffer() {
   return outputBuffer;
 }

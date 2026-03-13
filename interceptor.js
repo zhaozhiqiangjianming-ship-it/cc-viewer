@@ -222,26 +222,34 @@ export function setupInterceptor() {
   });
 
   // 注册退出处理器
-  const cleanupViewer = async () => {
-    if (viewerModule && typeof viewerModule.stopViewer === 'function') {
-      try {
-        await viewerModule.stopViewer();
-      } catch (err) {
-        // Silently fail
-      }
+  // 包装 process.exit，在退出前触发 stopViewer (含 serverStopping hook)
+  // 注入模式下 Claude Code 调用 process.exit() 会跳过 beforeExit，
+  // 且 exit 事件只能跑同步代码，无法执行异步清理
+  //
+  // 策略：仅当 viewer 服务已启动（isServerRunning()）时走异步退出路径，
+  // 等待 stopViewer 完成后再真正退出（最多 3 秒超时）；
+  // 服务未启动时（启动阶段）保持原始同步语义，避免干扰 Claude 初始化。
+  const _originalExit = process.exit;
+  let _exitCleanupDone = false;
+  process.exit = function(code) {
+    if (_exitCleanupDone) return _originalExit.call(process, code);
+    if (viewerModule?.isServerRunning?.() && typeof viewerModule.stopViewer === 'function') {
+      _exitCleanupDone = true;
+      Promise.race([
+        viewerModule.stopViewer(),
+        new Promise(r => setTimeout(r, 3000))
+      ]).finally(() => _originalExit.call(process, code));
+    } else {
+      _originalExit.call(process, code);
     }
   };
 
   process.on('SIGINT', () => {
-    cleanupViewer().finally(() => process.exit(0));
+    process.exit(0);
   });
 
   process.on('SIGTERM', () => {
-    cleanupViewer().finally(() => process.exit(0));
-  });
-
-  process.on('beforeExit', () => {
-    cleanupViewer();
+    process.exit(0);
   });
 
   const _originalFetch = globalThis.fetch;
