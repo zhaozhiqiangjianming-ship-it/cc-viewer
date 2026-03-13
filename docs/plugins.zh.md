@@ -70,8 +70,8 @@ export default {
 |-----------|------|------|--------|---------|
 | `httpsOptions` | waterfall | `{}` | `{ pfx, passphrase }` 或 `{ cert, key }` | 服务器创建前 |
 | `localUrl` | waterfall | `{ url, ip, port, token }` | `{ url }` | 客户端请求局域网地址时 |
-| `serverStarted` | parallel | `{ port, host, url, ip, token, protocol, pid }` | 忽略 | 服务器启动成功后 |
-| `serverStopping` | parallel | `{ pid }` | 忽略 | 服务器关闭前 |
+| `serverStarted` | parallel | `{ port, host, url, ip, token, protocol }` | 忽略 | 服务器启动成功后 |
+| `serverStopping` | parallel | `{}` | 忽略 | 服务器关闭前 |
 | `onNewEntry` | parallel | `entry` (JSONL 日志条目对象，含 `pid`) | 忽略 | 检测到新的 JSONL 日志条目时 |
 
 ---
@@ -168,8 +168,8 @@ hooks: {
 
 ```javascript
 hooks: {
-  async serverStarted({ port, host, url, ip, token, protocol, pid }) {
-    console.error(`[my-plugin] 服务器运行在 ${url}, Claude PID: ${pid}`);
+  async serverStarted({ port, host, url, ip, token, protocol }) {
+    console.error(`[my-plugin] 服务器运行在 ${url}`);
 
     // 示例：通知企业监控系统
     fetch('https://monitor.company.com/api/register', {
@@ -189,8 +189,8 @@ hooks: {
 
 ```javascript
 hooks: {
-  async serverStopping({ pid }) {
-    console.error(`[my-plugin] 服务器即将关闭, Claude PID: ${pid}`);
+  async serverStopping() {
+    console.error(`[my-plugin] 服务器即将关闭`);
   },
 }
 ```
@@ -305,7 +305,7 @@ export default {
       return { url: `https://dev.company.com/proxy/${token}` };
     },
 
-    async serverStarted({ port, host, pid }) {
+    async serverStarted({ port, host }) {
       // 向内部监控系统注册服务
       fetch('https://monitor.company.com/api/notify', {
         method: 'POST',
@@ -314,7 +314,7 @@ export default {
       }).catch(() => {});
     },
 
-    async serverStopping({ pid }) {
+    async serverStopping() {
       // 清理工作
     },
 

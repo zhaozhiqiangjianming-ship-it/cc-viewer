@@ -122,14 +122,14 @@ Triggered after the HTTP server starts successfully.
 | Property | Description |
 |----------|-------------|
 | **Type** | Parallel (concurrent notification) |
-| **Parameters** | `{ port, host, url, ip, token, protocol, pid }` |
+| **Parameters** | `{ port, host, url, ip, token, protocol }` |
 | **Returns** | Ignored |
 | **Timing** | After server binds to a port |
 
 ```javascript
 hooks: {
-  async serverStarted({ port, host, url, ip, token, protocol, pid }) {
-    console.error(`[my-plugin] Server is running at ${url}, Claude PID: ${pid}`);
+  async serverStarted({ port, host, url, ip, token, protocol }) {
+    console.error(`[my-plugin] Server is running at ${url}`);
   },
 }
 ```
@@ -141,14 +141,14 @@ Triggered before the server shuts down.
 | Property | Description |
 |----------|-------------|
 | **Type** | Parallel (concurrent notification) |
-| **Parameters** | `{ pid }` |
+| **Parameters** | `{}` |
 | **Returns** | Ignored |
 | **Timing** | When `stopViewer()` is called |
 
 ```javascript
 hooks: {
-  async serverStopping({ pid }) {
-    console.error(`[my-plugin] Server is shutting down, Claude PID: ${pid}`);
+  async serverStopping() {
+    console.error(`[my-plugin] Server is shutting down`);
   },
 }
 ```
@@ -240,7 +240,7 @@ export default {
       return { url: `https://dev.company.com/proxy/${token}` };
     },
 
-    async serverStarted({ port, host, pid }) {
+    async serverStarted({ port, host }) {
       // Notify internal monitoring system
       fetch('https://monitor.company.com/api/notify', {
         method: 'POST',
@@ -249,7 +249,7 @@ export default {
       }).catch(() => {});
     },
 
-    async serverStopping({ pid }) {
+    async serverStopping() {
       // Cleanup
     },
 

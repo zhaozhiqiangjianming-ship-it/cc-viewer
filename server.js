@@ -1734,8 +1734,7 @@ export async function startViewer() {
             setupTerminalWebSocket(currentServer);
           }
           // 通知插件服务器已启动
-          const claudePid = await getClaudePid().catch(() => process.pid);
-          runParallelHook('serverStarted', { port, host: HOST, url, ip: getLocalIp(), token: ACCESS_TOKEN, protocol: serverProtocol, pid: claudePid })
+          runParallelHook('serverStarted', { port, host: HOST, url, ip: getLocalIp(), token: ACCESS_TOKEN, protocol: serverProtocol })
             .catch(err => console.error('[CC Viewer] Plugin serverStarted hook error:', err.message));
           resolve(server);
         });
@@ -2043,7 +2042,7 @@ export function stopViewer() {
   return _stoppingPromise;
 }
 async function _doStop() {
-  try { await Promise.race([runParallelHook('serverStopping', { pid: await getClaudePid() }), new Promise(r => setTimeout(r, 3000))]); } catch { }
+  try { await Promise.race([runParallelHook('serverStopping', {}), new Promise(r => setTimeout(r, 3000))]); } catch { }
   // 如果用户未做选择，将临时文件转为正式文件
   if (_resumeState && _resumeState.tempFile) {
     try {
