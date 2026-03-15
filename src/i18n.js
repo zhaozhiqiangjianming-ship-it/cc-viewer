@@ -2715,6 +2715,26 @@ const i18nData = {
     "tr": "Oturumlar",
     "uk": "Сесії"
   },
+  "ui.projectStats.turnCount": {
+    "zh": "对话轮次",
+    "en": "Turns",
+    "zh-TW": "對話輪次",
+    "ko": "대화 턴",
+    "ja": "ターン数",
+    "de": "Gesprächsrunden",
+    "es": "Turnos",
+    "fr": "Tours",
+    "it": "Turni",
+    "da": "Ture",
+    "pl": "Tury",
+    "ru": "Ходов",
+    "ar": "الأدوار",
+    "no": "Turer",
+    "pt-BR": "Turnos",
+    "th": "เทิร์น",
+    "tr": "Turlar",
+    "uk": "Ходів"
+  },
   "ui.projectStats.totalFiles": {
     "zh": "会话文件数",
     "en": "Session Files",

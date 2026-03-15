@@ -723,8 +723,8 @@ class AppHeader extends React.Component {
             <div className={styles.projectStatLabel}>{t('ui.projectStats.totalRequests')}</div>
           </div>
           <div className={styles.projectStatCard}>
-            <div className={styles.projectStatValue}>{summary?.sessionCount ?? 0}</div>
-            <div className={styles.projectStatLabel}>{t('ui.projectStats.sessionCount')}</div>
+            <div className={styles.projectStatValue}>{summary?.turnCount ?? summary?.sessionCount ?? 0}</div>
+            <div className={styles.projectStatLabel}>{t('ui.projectStats.turnCount')}</div>
           </div>
           <div className={styles.projectStatCard}>
             <div className={styles.projectStatValue}>{summary?.fileCount ?? 0}</div>

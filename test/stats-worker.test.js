@@ -108,26 +108,41 @@ describe('stats-worker: parseJsonlFile via init', () => {
     assert.ok(stats.models['claude-sonnet-4-20250514'] >= 2);
   });
 
-  it('counts sessions correctly (mainAgent + single message)', async () => {
+  it('counts sessions and turns correctly', async () => {
     const projectName = 'sess-proj';
     const projectDir = join(logDir, projectName);
     mkdirSync(projectDir, { recursive: true });
 
     const content = buildJsonlContent([
+      // Turn 1: new session, messages.length=1
       {
         mainAgent: true,
         body: { model: 'claude-sonnet-4-20250514', messages: [{ role: 'user', content: 'hi' }] },
-        response: { body: { model: 'claude-sonnet-4-20250514', usage: { input_tokens: 10, output_tokens: 5 } } },
+        response: { body: { model: 'claude-sonnet-4-20250514', stop_reason: 'tool_use', usage: { input_tokens: 10, output_tokens: 5 } } },
       },
+      // Same turn 1: tool_use continuation, messages.length=3
       {
         mainAgent: true,
-        body: { model: 'claude-sonnet-4-20250514', messages: [{ role: 'user', content: 'q1' }, { role: 'assistant', content: 'a1' }] },
-        response: { body: { model: 'claude-sonnet-4-20250514', usage: { input_tokens: 20, output_tokens: 10 } } },
+        body: { model: 'claude-sonnet-4-20250514', messages: [{ role: 'user', content: 'hi' }, { role: 'assistant', content: 'tool call' }, { role: 'user', content: [{ type: 'tool_result', tool_use_id: 't1', content: 'ok' }] }] },
+        response: { body: { model: 'claude-sonnet-4-20250514', stop_reason: 'end_turn', usage: { input_tokens: 20, output_tokens: 10 } } },
       },
+      // Turn 2: user sends second message, messages.length=5
+      {
+        mainAgent: true,
+        body: { model: 'claude-sonnet-4-20250514', messages: [{ role: 'user', content: 'hi' }, { role: 'assistant', content: 'a1' }, { role: 'user', content: 'q2' }, { role: 'assistant', content: 'a2' }, { role: 'user', content: 'q3' }] },
+        response: { body: { model: 'claude-sonnet-4-20250514', stop_reason: 'end_turn', usage: { input_tokens: 30, output_tokens: 15 } } },
+      },
+      // SUGGESTION MODE: should NOT count as a turn, messages.length=7
+      {
+        mainAgent: true,
+        body: { model: 'claude-sonnet-4-20250514', messages: [{ role: 'user', content: 'hi' }, { role: 'assistant', content: 'a1' }, { role: 'user', content: 'q2' }, { role: 'assistant', content: 'a2' }, { role: 'user', content: 'q3' }, { role: 'assistant', content: 'a3' }, { role: 'user', content: [{ type: 'text', text: '[SUGGESTION MODE: Suggest next input]' }] }] },
+        response: { body: { model: 'claude-sonnet-4-20250514', stop_reason: 'end_turn', usage: { input_tokens: 5, output_tokens: 3 } } },
+      },
+      // New session: messages.length=1 again
       {
         mainAgent: true,
         body: { model: 'claude-sonnet-4-20250514', messages: [{ role: 'user', content: 'new' }] },
-        response: { body: { model: 'claude-sonnet-4-20250514', usage: { input_tokens: 15, output_tokens: 8 } } },
+        response: { body: { model: 'claude-sonnet-4-20250514', stop_reason: 'end_turn', usage: { input_tokens: 15, output_tokens: 8 } } },
       },
     ]);
     writeFileSync(join(projectDir, 'session.jsonl'), content);
@@ -136,7 +151,8 @@ describe('stats-worker: parseJsonlFile via init', () => {
 
     const stats = JSON.parse(readFileSync(join(projectDir, `${projectName}.json`), 'utf-8'));
     assert.equal(stats.summary.sessionCount, 2, 'only entries with messages.length===1 count as sessions');
-    assert.equal(stats.summary.requestCount, 3);
+    assert.equal(stats.summary.turnCount, 3, 'user turns: turn1 + turn2 + new session, excluding suggestion and tool continuation');
+    assert.equal(stats.summary.requestCount, 5);
   });
 
   it('handles empty JSONL file', async () => {
