@@ -1250,21 +1250,11 @@ class ChatView extends React.Component {
 
     // Wait for next prompt to appear (multi-question scenario)
     if (this._askAnswerQueue && this._askAnswerQueue.length > 0) {
-      let waitAttempts = 0;
-      const waitForNext = () => {
-        waitAttempts++;
-        if (waitAttempts > 100) { // 10s timeout
-          this._askSubmitting = false;
-          this._askAnswerQueue = [];
-          return;
-        }
-        if (this._currentPtyPrompt) {
-          this._processNextAskAnswer();
-          return;
-        }
-        setTimeout(waitForNext, 100);
-      };
-      setTimeout(waitForNext, 200);
+      // In tabbed forms, → switches tabs without generating a new prompt.
+      // Use fixed delay then proceed — cursor defaults to index 0 on new tab.
+      setTimeout(() => {
+        this._processNextAskAnswer();
+      }, 500);
     } else {
       this._askSubmitting = false;
     }
