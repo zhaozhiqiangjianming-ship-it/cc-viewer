@@ -10,6 +10,7 @@ import GitDiffView from './GitDiffView';
 import { extractToolResultText, getModelInfo } from '../utils/helpers';
 import { isSystemText, classifyUserContent, isMainAgent } from '../utils/contentFilter';
 import { classifyRequest, formatRequestTag, formatTeammateLabel } from '../utils/requestType';
+import { buildChunksForAnswer } from '../utils/ptyChunkBuilder';
 import { isMobile } from '../env';
 import { t } from '../i18n';
 import styles from './ChatView.module.css';
@@ -1096,13 +1097,26 @@ class ChatView extends React.Component {
   };
 
   /**
+   * Plan submission strategy for each answer based on question structure.
+   * Annotates each answer with `isLast` flag.
+   */
+  _planSubmissionSteps(answers) {
+    return answers.map((answer, i) => ({
+      ...answer,
+      isLast: i === answers.length - 1,
+    }));
+  }
+
+  /**
    * AskUserQuestion 交互提交
    * answers: [{ questionIndex, type: 'single'|'multi'|'other', optionIndex, selectedIndices, text }]
    */
   handleAskQuestionSubmit = (answers) => {
-    // Lazily connect WebSocket if not connected (e.g. mobile ChatView with cliMode=false)
-    if (!this._inputWs || this._inputWs.readyState !== WebSocket.OPEN) {
-      this._askAnswerQueue = [...answers];
+    const ws = this._inputWs;
+
+    // Lazily connect WebSocket if not connected
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      this._askAnswerQueue = this._planSubmissionSteps(answers);
       this._askSubmitting = true;
       this.connectInputWs();
       this._askWsRetries = 0;
@@ -1110,7 +1124,7 @@ class ChatView extends React.Component {
       return;
     }
 
-    this._askAnswerQueue = [...answers];
+    this._askAnswerQueue = this._planSubmissionSteps(answers);
     this._askSubmitting = true;
 
     // ptyPrompt may not be available yet (streaming response renders before CLI prompt appears)
@@ -1175,160 +1189,46 @@ class ChatView extends React.Component {
   }
 
   _submitSingleSelectAnswer(answer) {
-    const ws = this._inputWs;
-    if (!ws || ws.readyState !== WebSocket.OPEN) { this._askSubmitting = false; return; }
-    const prompt = this.state.ptyPrompt;
-
-    // optionIndex is 0-based index into the CLI option list; option number = optionIndex + 1
-    const targetNumber = answer.optionIndex + 1;
-    let targetIdx, currentIdx;
-
-    if (prompt && prompt.options) {
-      const options = prompt.options;
-      targetIdx = options.findIndex(o => o.number === targetNumber);
-      if (targetIdx < 0) targetIdx = answer.optionIndex;
-      currentIdx = options.findIndex(o => o.selected);
-      if (currentIdx < 0) currentIdx = 0;
-    } else {
-      // No ptyPrompt available: assume first option is selected (CLI default)
-      targetIdx = answer.optionIndex;
-      currentIdx = 0;
-    }
-
-    const diff = targetIdx - currentIdx;
-    const arrowKey = diff > 0 ? '\x1b[B' : '\x1b[A';
-    const steps = Math.abs(diff);
-
-    const sendStep = (i) => {
-      if (i < steps) {
-        ws.send(JSON.stringify({ type: 'input', data: arrowKey }));
-        setTimeout(() => sendStep(i + 1), 30);
-      } else {
-        setTimeout(() => {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'input', data: '\r' }));
-          }
-          this._finishCurrentAskAnswer();
-        }, 50);
-      }
-    };
-    sendStep(0);
+    this._submitViaSequentialQueue(answer);
   }
 
   _submitMultiSelectAnswer(answer) {
-    const ws = this._inputWs;
-    if (!ws || ws.readyState !== WebSocket.OPEN) { this._askSubmitting = false; return; }
-    const prompt = this.state.ptyPrompt;
-
-    // selectedIndices: 0-based indices into CLI option list
-    const indices = (answer.selectedIndices || []).slice().sort((a, b) => a - b);
-    let currentIdx = 0;
-    if (prompt && prompt.options) {
-      currentIdx = prompt.options.findIndex(o => o.selected);
-      if (currentIdx < 0) currentIdx = 0;
-    }
-
-    // Build steps: arrows (fixed delay) then space (ACK wait)
-    const steps = [];
-    for (const targetIdx of indices) {
-      const diff = targetIdx - currentIdx;
-      const arrowKey = diff > 0 ? '\x1b[B' : '\x1b[A';
-      // Each arrow as individual step with fixed delay
-      for (let i = 0; i < Math.abs(diff); i++) {
-        steps.push({ data: arrowKey, type: 'arrow' });
-      }
-      // Space to toggle — needs ACK wait
-      steps.push({ data: ' ', type: 'toggle' });
-      currentIdx = targetIdx;
-    }
-    // Enter to confirm — needs ACK wait
-    steps.push({ data: '\r', type: 'enter' });
-
-    // Queue: arrows use fixed delay, toggle/enter use ACK
-    const sendStep = (si) => {
-      if (si >= steps.length) {
-        this._finishCurrentAskAnswer();
-        return;
-      }
-
-      const step = steps[si];
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'input', data: step.data }));
-      }
-
-      if (step.type === 'arrow') {
-        // Arrows are lightweight — fixed 80ms delay
-        setTimeout(() => sendStep(si + 1), 80);
-      } else {
-        // Toggle/Enter: wait for PTY seq to increment (inquirer re-render)
-        const seqAfterSend = this._ptyDataSeq;
-        let attempts = 0;
-        const waitForAck = () => {
-          attempts++;
-          if (attempts > 40) { // 4s timeout
-            sendStep(si + 1);
-            return;
-          }
-          if (this._ptyDataSeq > seqAfterSend) {
-            // Extra settle time for inquirer to fully process
-            setTimeout(() => sendStep(si + 1), 200);
-            return;
-          }
-          setTimeout(waitForAck, 100);
-        };
-        setTimeout(waitForAck, 100);
-      }
-    };
-    sendStep(0);
+    this._submitViaSequentialQueue(answer);
   }
 
   _submitOtherAnswer(answer) {
+    this._submitViaSequentialQueue(answer);
+  }
+
+  /**
+   * Unified PTY submission: build chunks via ptyChunkBuilder, send via server-side sequential queue.
+   */
+  _submitViaSequentialQueue(answer) {
     const ws = this._inputWs;
     if (!ws || ws.readyState !== WebSocket.OPEN) { this._askSubmitting = false; return; }
-    const prompt = this.state.ptyPrompt;
 
-    // "Other" is always the last option in the CLI list
-    const targetIdx = answer.optionIndex; // optionIndex = options.length (0-based, "Other" is after all options)
-    let currentIdx = 0;
-    if (prompt && prompt.options) {
-      currentIdx = prompt.options.findIndex(o => o.selected);
-      if (currentIdx < 0) currentIdx = 0;
-    }
+    const isMultiQuestion = this._askAnswerQueue && this._askAnswerQueue.length > 0;
+    const chunks = buildChunksForAnswer(answer, this.state.ptyPrompt, isMultiQuestion);
 
-    const diff = targetIdx - currentIdx;
-    const arrowKey = diff > 0 ? '\x1b[B' : '\x1b[A';
-    const steps = Math.abs(diff);
-
-    const sendStep = (i) => {
-      if (i < steps) {
-        ws.send(JSON.stringify({ type: 'input', data: arrowKey }));
-        setTimeout(() => sendStep(i + 1), 30);
-      } else {
-        // Press Enter to select "Other"
-        setTimeout(() => {
-          ws.send(JSON.stringify({ type: 'input', data: '\r' }));
-          // Wait for CLI to enter text input mode, then type the text
-          const startBuf = this._ptyBuffer;
-          let attempts = 0;
-          const poll = () => {
-            attempts++;
-            if (attempts > 20 || this._ptyBuffer !== startBuf) {
-              if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'input', data: answer.text }));
-                setTimeout(() => {
-                  ws.send(JSON.stringify({ type: 'input', data: '\r' }));
-                  this._finishCurrentAskAnswer();
-                }, 50);
-              }
-              return;
-            }
-            setTimeout(poll, 100);
-          };
-          setTimeout(poll, 100);
-        }, 50);
-      }
+    const onMessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'input-sequential-done') {
+          ws.removeEventListener('message', onMessage);
+          this._finishCurrentAskAnswer();
+        }
+      } catch {}
     };
-    sendStep(0);
+    ws.addEventListener('message', onMessage);
+
+    ws.send(JSON.stringify({ type: 'input-sequential', chunks, settleMs: 300 }));
+
+    setTimeout(() => {
+      ws.removeEventListener('message', onMessage);
+      if (this._askSubmitting) {
+        this._finishCurrentAskAnswer();
+      }
+    }, 15000);
   }
 
   _finishCurrentAskAnswer() {
@@ -1342,8 +1242,11 @@ class ChatView extends React.Component {
       }
       return { ptyPrompt: null, ptyPromptHistory: history };
     });
-    // Only clear debounce timer; preserve _ptyBuffer so partial next-prompt data is not lost
-    if (this._ptyDebounceTimer) clearTimeout(this._ptyDebounceTimer);
+    // Only clear debounce timer when no more answers pending;
+    // if queue has more items, we need _detectPrompt() to fire for the next question
+    if (!this._askAnswerQueue || this._askAnswerQueue.length === 0) {
+      if (this._ptyDebounceTimer) clearTimeout(this._ptyDebounceTimer);
+    }
 
     // Wait for next prompt to appear (multi-question scenario)
     if (this._askAnswerQueue && this._askAnswerQueue.length > 0) {

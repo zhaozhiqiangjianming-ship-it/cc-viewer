@@ -184,7 +184,57 @@ export async function spawnClaude(proxyPort, cwd, extraArgs = [], claudePath = n
 export function writeToPty(data) {
   if (ptyProcess) {
     ptyProcess.write(data);
+    return true;
   }
+  return false;
+}
+
+/**
+ * Send chunks sequentially to PTY, waiting for PTY output between each.
+ * Designed for programmatic input (multi-select, paste, etc.) where
+ * the target application (e.g. inquirer) needs time to process each chunk.
+ * @param {string[]} chunks - array of input strings to send in order
+ * @param {Function} [onComplete] - called when all chunks are sent or on error
+ * @param {object} [opts] - { timeoutMs: per-chunk timeout (default 4000), settleMs: delay after ACK (default 150) }
+ */
+export function writeToPtySequential(chunks, onComplete, opts = {}) {
+  const timeoutMs = opts.timeoutMs || 4000;
+  const settleMs = opts.settleMs || 150;
+
+  if (!ptyProcess || !chunks || chunks.length === 0) {
+    if (onComplete) onComplete(false);
+    return;
+  }
+
+  let idx = 0;
+  let dataListener = null;
+
+  const cleanup = () => {
+    if (dataListener) {
+      dataListeners = dataListeners.filter(l => l !== dataListener);
+      dataListener = null;
+    }
+  };
+
+  const sendNext = () => {
+    if (idx >= chunks.length || !ptyProcess) {
+      cleanup();
+      if (onComplete) onComplete(true);
+      return;
+    }
+
+    const chunk = chunks[idx];
+    idx++;
+
+    ptyProcess.write(chunk);
+
+    // Space, Enter, and Right arrow (→ for submit) need more time for inquirer
+    const isToggleOrSubmit = chunk === ' ' || chunk === '\r' || chunk === '\x1b[C';
+    const delay = isToggleOrSubmit ? settleMs : 80;
+    setTimeout(sendNext, delay);
+  };
+
+  sendNext();
 }
 
 /**

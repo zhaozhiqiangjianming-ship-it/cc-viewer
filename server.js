@@ -1776,7 +1776,7 @@ export async function startViewer() {
 async function setupTerminalWebSocket(httpServer) {
   try {
     const { WebSocketServer } = await import('ws');
-    const { writeToPty, resizePty, onPtyData, onPtyExit, getPtyState, getOutputBuffer, getCurrentWorkspace, spawnShell } = await import('./pty-manager.js');
+    const { writeToPty, writeToPtySequential, resizePty, onPtyData, onPtyExit, getPtyState, getOutputBuffer, getCurrentWorkspace, spawnShell } = await import('./pty-manager.js');
     const wss = new WebSocketServer({ noServer: true });
     terminalWss = wss;
 
@@ -1863,6 +1863,20 @@ async function setupTerminalWebSocket(httpServer) {
               }
             }
             writeToPty(msg.data);
+          } else if (msg.type === 'input-sequential') {
+            // Programmatic sequential input: send chunks one by one, waiting for PTY ACK
+            const state = getPtyState();
+            if (!state.running) {
+              try { await spawnShell(); } catch {}
+            }
+            const chunks = msg.chunks;
+            if (Array.isArray(chunks) && chunks.length > 0) {
+              writeToPtySequential(chunks, (ok) => {
+                try {
+                  ws.send(JSON.stringify({ type: 'input-sequential-done', ok }));
+                } catch {}
+              }, { settleMs: msg.settleMs || 150 });
+            }
           } else if (msg.type === 'resize') {
             // 存储该客户端的尺寸
             clientSizes.set(ws, { cols: msg.cols, rows: msg.rows });
