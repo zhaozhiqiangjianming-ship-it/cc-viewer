@@ -116,4 +116,42 @@ describe('server plugin endpoints', { concurrency: false }, () => {
     const found = data.plugins.find(p => p.file === 'test-upload.js');
     assert.equal(!!found, false);
   });
+
+  // --- POST /api/plugins/install-from-url tests ---
+
+  it('POST /api/plugins/install-from-url rejects missing url', async () => {
+    const res = await httpRequest(port, '/api/plugins/install-from-url', {
+      method: 'POST',
+      body: {},
+    });
+    assert.equal(res.status, 400);
+    assert.ok(res.json().error.includes('required'));
+  });
+
+  it('POST /api/plugins/install-from-url rejects invalid URL', async () => {
+    const res = await httpRequest(port, '/api/plugins/install-from-url', {
+      method: 'POST',
+      body: { url: 'not-a-url' },
+    });
+    assert.equal(res.status, 400);
+    assert.ok(res.json().error.includes('Invalid URL'));
+  });
+
+  it('POST /api/plugins/install-from-url rejects non-http protocol', async () => {
+    const res = await httpRequest(port, '/api/plugins/install-from-url', {
+      method: 'POST',
+      body: { url: 'ftp://example.com/plugin.js' },
+    });
+    assert.equal(res.status, 400);
+    assert.ok(res.json().error.includes('Invalid URL'));
+  });
+
+  it('POST /api/plugins/install-from-url returns 500 for unreachable URL', async () => {
+    const res = await httpRequest(port, '/api/plugins/install-from-url', {
+      method: 'POST',
+      body: { url: 'https://127.0.0.1:1/nonexistent-plugin.js' },
+    });
+    assert.equal(res.status, 500);
+    assert.ok(res.json().error.includes('Failed to fetch'));
+  });
 }); 

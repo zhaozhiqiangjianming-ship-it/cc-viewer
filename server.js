@@ -1262,6 +1262,102 @@ async function handleRequest(req, res) {
     return;
   }
 
+  if (url === '/api/plugins/install-from-url' && method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; if (body.length > MAX_POST_BODY) req.destroy(); });
+    req.on('end', async () => {
+      try {
+        const { url: fileUrl } = JSON.parse(body);
+        if (!fileUrl) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'URL is required' }));
+          return;
+        }
+        // 验证 URL 格式
+        let parsedUrl;
+        try {
+          parsedUrl = new URL(fileUrl);
+        } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid URL' }));
+          return;
+        }
+        if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid URL' }));
+          return;
+        }
+        // 下载远程文件（限制 5MB，超时 30s）
+        const MAX_PLUGIN_SIZE = 5 * 1024 * 1024;
+        let content;
+        try {
+          const resp = await fetch(fileUrl, { signal: AbortSignal.timeout(30000) });
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          const text = await resp.text();
+          if (text.length > MAX_PLUGIN_SIZE) throw new Error('File too large (max 5MB)');
+          content = text;
+        } catch (fetchErr) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Failed to fetch: ' + fetchErr.message }));
+          return;
+        }
+        // 通过子进程 import() 提取插件内部 name
+        let saveName = '';
+        const { tmpdir } = await import('node:os');
+        const tmpFile = join(tmpdir(), `ccv-install-${Date.now()}.mjs`);
+        writeFileSync(tmpFile, content, 'utf-8');
+        try {
+          const extractScript = join(__dirname, 'lib', 'extract-plugin-name.mjs');
+          const result = await new Promise((resolve, reject) => {
+            execFile('node', [extractScript, tmpFile], { timeout: 5000 }, (err, stdout) => {
+              if (err) return reject(err);
+              resolve(stdout);
+            });
+          });
+          const parsed = JSON.parse(result);
+          if (parsed.name) saveName = parsed.name;
+        } catch { }
+        try { unlinkSync(tmpFile); } catch { }
+        // fallback：从 URL 路径提取文件名，排除通用名称
+        if (!saveName) {
+          const urlFilename = parsedUrl.pathname.split('/').pop();
+          if (urlFilename && (urlFilename.endsWith('.js') || urlFilename.endsWith('.mjs'))
+              && urlFilename !== 'index.js' && urlFilename !== 'index.mjs') {
+            saveName = urlFilename.replace(/\.(js|mjs)$/, '');
+          }
+        }
+        // 最终 fallback：使用 plugin-<timestamp>
+        if (!saveName) {
+          saveName = `plugin-${Date.now()}`;
+        }
+        let filename = (saveName.endsWith('.js') || saveName.endsWith('.mjs')) ? saveName : saveName + '.js';
+        // 安全校验
+        if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+          filename = `plugin-${Date.now()}.js`;
+        }
+        // 确保插件目录存在
+        if (!existsSync(PLUGINS_DIR)) {
+          mkdirSync(PLUGINS_DIR, { recursive: true });
+        }
+        // 同名文件去重：追加唯一标识
+        if (existsSync(join(PLUGINS_DIR, filename))) {
+          const ext = filename.endsWith('.mjs') ? '.mjs' : '.js';
+          const base = filename.slice(0, -ext.length);
+          filename = `${base}-${Date.now()}${ext}`;
+        }
+        writeFileSync(join(PLUGINS_DIR, filename), content, 'utf-8');
+        await loadPlugins();
+        const plugins = getPluginsInfo();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, plugins, pluginsDir: PLUGINS_DIR }));
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    });
+    return;
+  }
+
   // 返回局域网访问地址
   if (url === '/api/local-url' && method === 'GET') {
     const localIp = getLocalIp();

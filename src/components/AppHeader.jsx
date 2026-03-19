@@ -1,6 +1,6 @@
 import React from 'react';
 import { Space, Tag, Button, Dropdown, Popover, Modal, Collapse, Drawer, Switch, Tabs, Spin, Input, Table, message } from 'antd';
-import { MessageOutlined, FileTextOutlined, ImportOutlined, DashboardOutlined, ExportOutlined, DownloadOutlined, SettingOutlined, BarChartOutlined, CodeOutlined, GlobalOutlined, CopyOutlined, ApiOutlined, DeleteOutlined, ReloadOutlined, PlusOutlined } from '@ant-design/icons';
+import { MessageOutlined, FileTextOutlined, ImportOutlined, DashboardOutlined, ExportOutlined, DownloadOutlined, SettingOutlined, BarChartOutlined, CodeOutlined, GlobalOutlined, CopyOutlined, ApiOutlined, DeleteOutlined, ReloadOutlined, PlusOutlined, CloudDownloadOutlined } from '@ant-design/icons';
 import { QRCodeCanvas } from 'qrcode.react';
 import { formatTokenCount, computeTokenStats, computeCacheRebuildStats, computeToolUsageStats, computeSkillUsageStats, getModelMaxTokens, extractCachedContent } from '../utils/helpers';
 import { isSystemText, classifyUserContent, isMainAgent } from '../utils/contentFilter';
@@ -35,7 +35,7 @@ const LANG_OPTIONS = [
 class AppHeader extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { countdownText: '', promptModalVisible: false, promptData: [], promptViewMode: 'original', settingsDrawerVisible: false, globalSettingsVisible: false, projectStatsVisible: false, projectStats: null, projectStatsLoading: false, localUrl: '', pluginModalVisible: false, pluginsList: [], pluginsDir: '', deleteConfirmVisible: false, deleteTarget: null, processModalVisible: false, processList: [], processLoading: false, logoDropdownOpen: false, cacheHighlightIdx: null, cacheHighlightFading: false };
+    this.state = { countdownText: '', promptModalVisible: false, promptData: [], promptViewMode: 'original', settingsDrawerVisible: false, globalSettingsVisible: false, projectStatsVisible: false, projectStats: null, projectStatsLoading: false, localUrl: '', pluginModalVisible: false, pluginsList: [], pluginsDir: '', deleteConfirmVisible: false, deleteTarget: null, processModalVisible: false, processList: [], processLoading: false, logoDropdownOpen: false, cacheHighlightIdx: null, cacheHighlightFading: false, cdnModalVisible: false, cdnUrl: '', cdnLoading: false };
     this._rafId = null;
     this._expiredTimer = null;
     this.updateCountdown = this.updateCountdown.bind(this);
@@ -902,6 +902,56 @@ class AppHeader extends React.Component {
     input.click();
   };
 
+  handleShowCdnModal = () => {
+    this.setState({ cdnModalVisible: true, cdnUrl: '', cdnLoading: false });
+  };
+
+  handleCdnUrlChange = (e) => {
+    this.setState({ cdnUrl: e.target.value });
+  };
+
+  handleCdnInstall = () => {
+    const { cdnUrl } = this.state;
+    if (!cdnUrl.trim()) {
+      message.error(t('ui.plugins.cdnUrlRequired'));
+      return;
+    }
+    try {
+      new URL(cdnUrl);
+    } catch {
+      message.error(t('ui.plugins.cdnInvalidUrl'));
+      return;
+    }
+    this.setState({ cdnLoading: true });
+    fetch(apiUrl('/api/plugins/install-from-url'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: cdnUrl.trim() }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          message.error(t('ui.plugins.cdnInstallFailed', { reason: data.error }));
+        } else {
+          message.success(t('ui.plugins.cdnInstallSuccess'));
+          if (data.plugins) {
+            this.setState({ pluginsList: data.plugins, pluginsDir: data.pluginsDir || '' });
+          }
+          this.setState({ cdnModalVisible: false, cdnUrl: '' });
+        }
+      })
+      .catch((err) => {
+        message.error(t('ui.plugins.cdnInstallFailed', { reason: err.message || 'Network error' }));
+      })
+      .finally(() => {
+        this.setState({ cdnLoading: false });
+      });
+  };
+
+  handleCdnCancel = () => {
+    this.setState({ cdnModalVisible: false, cdnUrl: '', cdnLoading: false });
+  };
+
   fetchProcesses = () => {
     this.setState({ processLoading: true });
     fetch(apiUrl('/api/ccv-processes'))
@@ -1410,7 +1460,10 @@ class AppHeader extends React.Component {
           onCancel={() => this.setState({ pluginModalVisible: false })}
           footer={
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Button icon={<PlusOutlined />} onClick={this.handleAddPlugin}>{t('ui.plugins.add')}</Button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Button icon={<PlusOutlined />} onClick={this.handleAddPlugin}>{t('ui.plugins.add')}</Button>
+                <Button icon={<CloudDownloadOutlined />} onClick={this.handleShowCdnModal}>{t('ui.plugins.cdnInstall')}</Button>
+              </div>
               <Button icon={<ReloadOutlined />} onClick={this.handleReloadPlugins}>{t('ui.plugins.reload')}</Button>
             </div>
           }
@@ -1479,6 +1532,27 @@ class AppHeader extends React.Component {
           cancelText="Cancel"
         >
           <p>{this.state.deleteTarget ? t('ui.plugins.deleteConfirm', { name: this.state.deleteTarget.name }) : ''}</p>
+        </Modal>
+        <Modal
+          title={<span><CloudDownloadOutlined style={{ marginRight: 8 }} />{t('ui.plugins.cdnInstall')}</span>}
+          open={this.state.cdnModalVisible}
+          onCancel={this.handleCdnCancel}
+          onOk={this.handleCdnInstall}
+          confirmLoading={this.state.cdnLoading}
+          okText={t('ui.plugins.cdnInstall')}
+          cancelText="Cancel"
+          width={480}
+        >
+          <div>
+            <div style={{ marginBottom: 6, color: '#ccc', fontSize: 13 }}>{t('ui.plugins.cdnUrl')}</div>
+            <Input
+              placeholder={t('ui.plugins.cdnUrlPlaceholder')}
+              value={this.state.cdnUrl}
+              onChange={this.handleCdnUrlChange}
+              onPressEnter={this.handleCdnInstall}
+              style={{ background: '#1a1a2e', borderColor: '#333', color: '#eee' }}
+            />
+          </div>
         </Modal>
         <Modal
           title={<span><DashboardOutlined style={{ marginRight: 8 }} />{t('ui.processManagement')}</span>}
