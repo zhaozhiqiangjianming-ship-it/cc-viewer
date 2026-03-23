@@ -705,7 +705,7 @@ class App extends React.Component {
     const prevMsgCount = lastSession.messages ? lastSession.messages.length : 0;
     const isNewConversation = prevMsgCount > 0 && newMessages.length < prevMsgCount * 0.5 && (prevMsgCount - newMessages.length) > 4;
 
-    if (userId && userId === lastSession.userId && !isNewConversation) {
+    if (userId === lastSession.userId && !isNewConversation) {
       const updated = [...prevSessions];
       updated[updated.length - 1] = { userId, messages: newMessages, response: newResponse, entryTimestamp };
       return updated;
