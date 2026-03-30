@@ -51,7 +51,7 @@ body {
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 13px;
-  color: #9597eb;
+  color: #aeafff;
 }
 .chat-md pre code {
   background: none;
@@ -82,10 +82,15 @@ body {
 /* chat-boxer: 白底黑字气泡容器 */
 .chat-boxer {
   background: linear-gradient(to top, #222222, #303030);
-  color: #f5f5f5;
+  color: #fff;
   border-radius: 6px;
   padding: 2px 10px;
   margin-bottom: 6px;
+  border: 1px solid #555;
+  box-sizing: border-box;
+}
+.chat-boxer:hover {
+  background: linear-gradient(to top, #2c2c2c, #3c3c3c);
 }
 .chat-boxer .chat-md tbody { background: #000; }
 

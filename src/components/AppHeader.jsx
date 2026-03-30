@@ -723,7 +723,7 @@ class AppHeader extends React.Component {
           </div>
         )}
         {hasSubAgentStats && (
-          <div className={styles.modelCard}>
+          <div className={hasTeammateStats ? styles.modelCardSpaced : styles.modelCard}>
             <div className={styles.modelName}>{t('ui.subAgentStats')}</div>
             <table className={styles.statsTable}>
             <thead>

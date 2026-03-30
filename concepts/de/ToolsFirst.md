@@ -38,6 +38,44 @@ Beim KV-Cache-Präfix-Matching ist **früher Inhalt entscheidender** — jede Ä
 
 Deshalb ist `tools_change` in [CacheRebuild](CacheRebuild.md) oft der teuerste Rebuild-Grund — es bricht die Präfix-Kette ganz am Anfang.
 
+## Warum werden Tool-Definitionen vor dem „Gehirn" platziert?
+
+Aus Caching-Perspektive ist die Platzierung der Tools an erster Stelle eine technische Tatsache. Doch auch aus Sicht des kognitiven Designs ist diese Reihenfolge logisch — **Tools sind die Hände und Füße, System Prompt ist das Gehirn**.
+
+Bevor ein Mensch handelt, muss er wahrnehmen, welche Gliedmaßen und Werkzeuge ihm zur Verfügung stehen. Ein Säugling versteht nicht zuerst die Regeln der Welt (System) und lernt dann zu greifen — er nimmt zuerst wahr, dass er Hände und Füße hat, und versteht dann durch Interaktion mit der Umwelt allmählich die Regeln. Ebenso muss ein LLM wissen, welche Tools es aufrufen kann (Dateien lesen, Code schreiben, suchen, Befehle ausführen), bevor es Aufgabenanweisungen (System Prompt) erhält, damit es bei der Verarbeitung der Anweisungen genau einschätzen kann: „Was kann ich tun?" und „Wie soll ich vorgehen?"
+
+Wenn es umgekehrt wäre — dem Modell zuerst sagen „Deine Aufgabe ist es, dieses Modul umzubauen", dann „Du hast Read, Edit, Bash-Tools" — würde dem Modell beim Verständnis der Aufgabe kritische Information über seine Fähigkeitsgrenzen fehlen, was zu unrealistischen Plänen oder dem Übersehen verfügbarer Ansätze führen könnte.
+
+**Erst wissen, welche Karten man hat, dann entscheiden, wie man spielt.** Das ist die kognitive Logik dahinter, dass Tools vor System stehen.
+
+## Warum sind MCP-Tools ebenfalls an dieser Position?
+
+MCP-Tools (Model Context Protocol) werden wie eingebaute Tools ganz vorne im Tools-Bereich platziert. Das Verständnis der Position von MCP im Kontext hilft, die tatsächlichen Vorteile und Kosten zu bewerten.
+
+### Vorteile von MCP
+
+- **Fähigkeitserweiterung**: MCP ermöglicht Modellen den Zugriff auf externe Dienste (Datenbankabfragen, API-Aufrufe, IDE-Operationen, Browser-Steuerung usw.) und überwindet die Grenzen eingebauter Tools
+- **Offenes Ökosystem**: Jeder kann einen MCP-Server implementieren; das Modell erhält neue Fähigkeiten ohne Neutraining
+- **Laden bei Bedarf**: MCP-Server können je nach Aufgabenszenario selektiv verbunden/getrennt werden, was flexible Tool-Zusammenstellungen ermöglicht
+
+### Kosten von MCP
+
+- **Cache-Killer**: Die JSON-Schema-Definition jedes MCP-Tools wird ganz an den Anfang des KV-Cache-Präfix angehängt. Ein MCP-Tool hinzufügen/entfernen = **gesamter Cache von Anfang an ungültig**. Häufiges Verbinden/Trennen von MCP-Servern reduziert die Cache-Trefferquote drastisch
+- **Präfix-Aufblähung**: MCP-Tool-Schemas sind typischerweise größer als eingebaute Tools (detaillierte Parameterbeschreibungen, Enumerationswerte usw.). Viele MCP-Tools erhöhen die Token-Anzahl im Tools-Bereich erheblich und verringern den für Messages verfügbaren Kontext-Raum
+- **Latenz-Overhead**: MCP-Tool-Aufrufe erfordern prozessübergreifende Kommunikation (JSON-RPC über stdio/SSE), eine Größenordnung langsamer als eingebaute Funktionsaufrufe
+- **Stabilitätsrisiko**: MCP-Server sind externe Prozesse, die abstürzen, Timeouts verursachen oder unerwartete Formate zurückgeben können und zusätzliche Fehlerbehandlung erfordern
+
+### Praktische Empfehlungen
+
+| Szenario | Empfehlung |
+|----------|-----------|
+| Lange Gespräche, häufige Interaktion | MCP-Tool-Anzahl minimieren, um Cache-Präfix-Stabilität zu schützen |
+| Kurze Aufgaben, einmalige Operationen | MCP-Tools frei verwenden; Cache-Auswirkung ist begrenzt |
+| Häufiges Hinzufügen/Entfernen von MCP-Servern | Jede Änderung löst vollständigen Cache-Neuaufbau aus; feste Tool-Zusammenstellung erwägen |
+| Überdimensionierte Tool-Schemas | Beschreibungen und Enums kürzen, um Token-Verbrauch im Präfix zu reduzieren |
+
+Im Context-Panel von cc-viewer werden MCP-Tools neben eingebauten Tools im Tools-Bereich angezeigt, sodass Sie die Schema-Größe jedes Tools und seinen Beitrag zum Cache-Präfix direkt sehen können.
+
 ## Layout-Design von cc-viewer
 
 cc-viewer ordnet das Context-Panel so an, dass es der KV-Cache-Präfix-Sequenz entspricht:

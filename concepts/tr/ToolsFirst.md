@@ -38,6 +38,44 @@ KV-Cache önek eşleştirmesinde **önceki içerik daha kritiktir** — herhangi
 
 Bu nedenle [CacheRebuild](CacheRebuild.md)'deki `tools_change`, genellikle en pahalı yeniden oluşturma nedenidir — önek zincirini en baştan kırar.
 
+## Araç tanımları neden "beyinden" önce yerleştirilir?
+
+Önbellekleme açısından, Tools'un ilk sırada olması teknik bir gerçektir. Ancak bilişsel tasarım açısından da bu sıralama mantıklıdır — **Tools eller ve ayaklardır, System Prompt beyindir**.
+
+Harekete geçmeden önce, bir kişi hangi uzuvlara ve araçlara sahip olduğunu algılamalıdır. Bir bebek önce dünyanın kurallarını (System) anlayıp sonra tutmayı öğrenmez — önce ellerinin ve ayaklarının olduğunu algılar, ardından çevreyle etkileşim yoluyla kuralları kademeli olarak anlar. Benzer şekilde, bir LLM görev talimatlarını (System Prompt) almadan önce hangi araçları çağırabileceğini (dosya okuma, kod yazma, arama, komut çalıştırma) bilmelidir, böylece talimatları işlerken "ne yapabilirim" ve "nasıl yapmalıyım" sorularını doğru değerlendirebilir.
+
+Eğer tersi olsaydı — modele önce "görevin bu modülü yeniden yapılandırmak", sonra "Read, Edit, Bash araçların var" deseydiniz — model görevi anlarken yetenek sınırları hakkında kritik bilgiden yoksun olurdu, potansiyel olarak gerçekçi olmayan planlar üretebilir veya mevcut yaklaşımları gözden kaçırabilirdi.
+
+**Elindeki kartları bil, sonra nasıl oynayacağına karar ver.** Tools'un System'den önce gelmesinin arkasındaki bilişsel mantık budur.
+
+## MCP araçları neden bu konumda?
+
+MCP (Model Context Protocol) araçları, yerleşik araçlar gibi, Tools alanının en başına yerleştirilir. MCP'nin bağlamdaki konumunu anlamak, gerçek faydalarını ve maliyetlerini değerlendirmeye yardımcı olur.
+
+### MCP Avantajları
+
+- **Yetenek genişletme**: MCP, modellerin harici hizmetlere (veritabanı sorguları, API çağrıları, IDE işlemleri, tarayıcı kontrolü vb.) erişmesini sağlar ve yerleşik araçların sınırlarını aşar
+- **Açık ekosistem**: Herkes bir MCP sunucusu uygulayabilir; model yeniden eğitim olmadan yeni yetenekler kazanır
+- **İsteğe bağlı yükleme**: MCP sunucuları görev senaryosuna göre seçici olarak bağlanabilir/bağlantısı kesilebilir, esnek araç setleri oluşturulabilir
+
+### MCP Maliyetleri
+
+- **Önbellek katili**: Her MCP aracının JSON Schema tanımı KV-Cache ön ekinin en başına eklenir. Bir MCP aracı eklemek/kaldırmak = **tüm önbellek baştan geçersiz kılınır**. MCP sunucularını sık sık bağlama/bağlantı kesme, önbellek isabet oranını büyük ölçüde düşürür
+- **Ön ek şişmesi**: MCP araç Şemaları genellikle yerleşik araçlardan daha büyüktür (ayrıntılı parametre açıklamaları, enum değerleri vb.). Çok sayıda MCP aracı, Tools alanındaki token sayısını önemli ölçüde artırır ve Messages için kullanılabilir bağlam alanını daraltır
+- **Gecikme yükü**: MCP araç çağrıları süreçler arası iletişim gerektirir (stdio/SSE üzerinden JSON-RPC), yerleşik fonksiyon çağrılarından bir büyüklük derecesi daha yavaştır
+- **Kararlılık riski**: MCP sunucuları çökebilen, zaman aşımına uğrayabilen veya beklenmeyen formatlar döndürebilen harici süreçlerdir ve ek hata işleme gerektirir
+
+### Pratik Öneriler
+
+| Senaryo | Öneri |
+|---------|-------|
+| Uzun konuşmalar, sık etkileşim | Önbellek ön eki kararlılığını korumak için MCP araç sayısını minimize edin |
+| Kısa görevler, tek seferlik işlemler | MCP araçlarını serbestçe kullanın; önbellek etkisi sınırlıdır |
+| Sık MCP sunucusu ekleme/kaldırma | Her değişiklik tam önbellek yeniden oluşturmayı tetikler; araç setini sabitlemeyi düşünün |
+| Aşırı büyük Tool Şemaları | Ön ek token tüketimini azaltmak için açıklamaları ve enum'ları kısaltın |
+
+cc-viewer'ın Context panelinde, MCP araçları yerleşik araçlarla birlikte Tools alanında görüntülenir ve her aracın Şema boyutunu ve önbellek ön ekine katkısını net bir şekilde gösterir.
+
 ## cc-viewer'ın Düzen Tasarımı
 
 cc-viewer, Bağlam panelini KV-Cache önek sırasına uyacak şekilde düzenler:

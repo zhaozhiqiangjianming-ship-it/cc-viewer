@@ -894,12 +894,16 @@ class ChatView extends React.Component {
             const activeDangerousPrompt = this.props.cliMode
               ? this.state.ptyPromptHistory.slice().reverse().find(p => isDangerousOperationPrompt(p) && p.status === 'active') || null
               : null;
+            // Last Response 过滤：隐藏 tool_use 块，仅保留交互卡片（AskUserQuestion / ExitPlanMode）
+            const lrContent = respContent.filter(b =>
+              b.type !== 'tool_use' || b.name === 'AskUserQuestion' || b.name === 'ExitPlanMode'
+            );
             this._lastResponseItems = (
               <React.Fragment key="last-response-group">
                 <Divider style={{ borderColor: '#2a2a2a', margin: '8px 0' }}>
                   <Text type="secondary" className={styles.lastResponseLabel}>{t('ui.lastResponse')}</Text>
                 </Divider>
-                <ChatMessage key="resp-asst" role="assistant" content={respContent} timestamp={session.entryTimestamp} modelInfo={modelInfo} collapseToolResults={collapseToolResults} expandThinking={expandThinking} toolResultMap={EMPTY_MAP} askAnswerMap={EMPTY_MAP} planApprovalMap={planApprovalMap} latestPlanContent={latestPlanContent} lastPendingAskId={respLastPendingAskId} lastPendingPlanId={respLastPendingPlanId} activePlanPrompt={activePlanPrompt} activeDangerousPrompt={activeDangerousPrompt} ptyPrompt={this.state.ptyPrompt} onPlanApprovalClick={this.handlePromptOptionClick} onPlanFeedbackSubmit={this.handlePlanFeedbackSubmit} onDangerousApprovalClick={this.handlePromptOptionClick} cliMode={this.props.cliMode} onAskQuestionSubmit={this.handleAskQuestionSubmit} onOpenFile={this.handleOpenToolFilePath} />
+                <ChatMessage key="resp-asst" role="assistant" content={lrContent} timestamp={session.entryTimestamp} modelInfo={modelInfo} collapseToolResults={collapseToolResults} expandThinking={expandThinking} toolResultMap={EMPTY_MAP} askAnswerMap={EMPTY_MAP} planApprovalMap={planApprovalMap} latestPlanContent={latestPlanContent} lastPendingAskId={respLastPendingAskId} lastPendingPlanId={respLastPendingPlanId} activePlanPrompt={activePlanPrompt} activeDangerousPrompt={activeDangerousPrompt} ptyPrompt={this.state.ptyPrompt} onPlanApprovalClick={this.handlePromptOptionClick} onPlanFeedbackSubmit={this.handlePlanFeedbackSubmit} onDangerousApprovalClick={this.handlePromptOptionClick} cliMode={this.props.cliMode} onAskQuestionSubmit={this.handleAskQuestionSubmit} onOpenFile={this.handleOpenToolFilePath} />
               </React.Fragment>
             );
           }
@@ -1565,9 +1569,8 @@ class ChatView extends React.Component {
 
     ws.send(JSON.stringify({ type: 'ask-hook-answer', answers: hookAnswers }));
 
-    // Clear hook state
-    this._askHookActive = false;
-    this._askHookQuestions = null;
+    // 不立即清除 _askHookActive：保留 hook bridge 状态以支持重试
+    // hook 状态由 ask-hook-timeout WS 消息或下一轮 streaming response 自然清除
     this._askSubmitting = false;
 
     // Update UI state — mark prompt as answered

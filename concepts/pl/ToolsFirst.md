@@ -38,6 +38,44 @@ W dopasowywaniu prefiksu KV-Cache **wcześniejsza treść jest bardziej krytyczn
 
 Dlatego `tools_change` w [CacheRebuild](CacheRebuild.md) jest zazwyczaj najdroższym powodem przebudowy — przerywa łańcuch prefiksu na samym początku.
 
+## Dlaczego definicje narzędzi są umieszczone przed "mózgiem"?
+
+Z perspektywy cache'owania, umieszczenie Tools na pierwszym miejscu jest faktem technicznym. Ale z perspektywy projektowania kognitywnego ta kolejność jest równie logiczna — **Tools to ręce i nogi, System Prompt to mózg**.
+
+Przed podjęciem działania człowiek musi rozpoznać, jakie kończyny i narzędzia ma do dyspozycji. Niemowlę nie rozumie najpierw zasad świata (System), a potem uczy się chwytać — najpierw wyczuwa, że ma ręce i nogi, a następnie stopniowo rozumie zasady przez interakcję ze środowiskiem. Podobnie LLM musi wiedzieć, jakie narzędzia może wywołać (czytanie plików, pisanie kodu, wyszukiwanie, wykonywanie poleceń) przed otrzymaniem instrukcji zadania (System Prompt), aby móc dokładnie ocenić "co mogę zrobić" i "jak powinienem to zrobić" podczas przetwarzania instrukcji.
+
+Gdyby było odwrotnie — najpierw powiedzieć modelowi "twoim zadaniem jest refaktoryzacja tego modułu", potem "masz narzędzia Read, Edit, Bash" — modelowi brakowałoby kluczowych informacji o granicach swoich możliwości przy rozumieniu zadania, co mogłoby prowadzić do nierealistycznych planów lub pominięcia dostępnych podejść.
+
+**Poznaj swoje karty zanim zdecydujesz, jak grać.** To jest logika kognitywna stojąca za umieszczeniem Tools przed System.
+
+## Dlaczego narzędzia MCP również znajdują się na tej pozycji?
+
+Narzędzia MCP (Model Context Protocol), podobnie jak narzędzia wbudowane, są umieszczone na samym początku obszaru Tools. Zrozumienie pozycji MCP w kontekście pomaga ocenić jego realne korzyści i koszty.
+
+### Zalety MCP
+
+- **Rozszerzenie możliwości**: MCP pozwala modelom na dostęp do usług zewnętrznych (zapytania do baz danych, wywołania API, operacje IDE, sterowanie przeglądarką itp.), przekraczając granice narzędzi wbudowanych
+- **Otwarty ekosystem**: Każdy może zaimplementować serwer MCP; model zyskuje nowe możliwości bez ponownego trenowania
+- **Ładowanie na żądanie**: Serwery MCP mogą być selektywnie łączone/rozłączane w zależności od scenariusza, elastycznie komponując zestawy narzędzi
+
+### Koszty MCP
+
+- **Zabójca cache'u**: Definicja JSON Schema każdego narzędzia MCP jest dołączana na samym początku prefiksu KV-Cache. Dodanie lub usunięcie jednego narzędzia MCP = **cały cache unieważniony od początku**. Częste łączenie/rozłączanie serwerów MCP drastycznie obniża współczynnik trafień cache'u
+- **Puchnięcie prefiksu**: Schematy narzędzi MCP są typowo większe niż narzędzia wbudowane (szczegółowe opisy parametrów, wartości enum itp.). Wiele narzędzi MCP znacząco zwiększa liczbę tokenów w obszarze Tools, zmniejszając przestrzeń kontekstu dostępną dla Messages
+- **Narzut opóźnienia**: Wywołania narzędzi MCP wymagają komunikacji międzyprocesowej (JSON-RPC przez stdio/SSE), o rząd wielkości wolniejszej niż wywołania wbudowanych funkcji
+- **Ryzyko stabilności**: Serwery MCP to procesy zewnętrzne, które mogą się zawiesić, przekroczyć limit czasu lub zwrócić nieoczekiwane formaty, wymagając dodatkowej obsługi błędów
+
+### Praktyczne rekomendacje
+
+| Scenariusz | Rekomendacja |
+|-----------|-------------|
+| Długie rozmowy, częsta interakcja | Minimalizować liczbę narzędzi MCP, aby chronić stabilność prefiksu cache'u |
+| Krótkie zadania, jednorazowe operacje | Swobodnie używać narzędzi MCP; wpływ na cache jest ograniczony |
+| Częste dodawanie/usuwanie serwerów MCP | Każda zmiana wywołuje pełną przebudowę cache'u; rozważyć ustalenie zestawu narzędzi |
+| Zbyt duże Tool Schemas | Skrócić opisy i enumy, aby zmniejszyć zużycie tokenów prefiksu |
+
+W panelu Context cc-viewer narzędzia MCP są wyświetlane obok narzędzi wbudowanych w obszarze Tools, dając jasny widok na rozmiar Schema każdego narzędzia i jego wkład w prefiks cache'u.
+
 ## Projekt układu cc-viewer
 
 cc-viewer rozmieszcza panel kontekstu tak, aby odpowiadał sekwencji prefiksu KV-Cache:
