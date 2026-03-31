@@ -232,7 +232,7 @@ export default function WorkspaceList({ onLaunch }) {
       <div className={styles.inner}>
         <div className={styles.header}>
           <Title level={3} className={styles.headerTitle}>
-            <FolderOpenOutlined style={{ marginRight: 8, color: '#1668dc' }} />
+            <FolderOpenOutlined className={styles.headerFolderIcon} />
             {t('ui.workspaces.title')}
           </Title>
           <Text type="secondary" className={styles.headerSubtitle}>{t('ui.workspaces.subtitle')}</Text>

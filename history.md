@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.6.76 (2026-04-01)
+
+- Refactor: CSS color consolidation — 203 unique colors reduced to 102 (-49%)
+  - Unified all rgba/rgb/named colors to hex format
+  - Merged near-duplicate grays, blues, reds, greens, yellows across 36 CSS files
+  - Extracted 15 inline styles from JSX to CSS modules
+  - Standardized blue-gray background palette (16 shades → 6)
+- Feature: PC terminal hint in chat input bar (18 languages)
+- Fix: inline styles extracted to CSS classes (ChatView, AppHeader, ChatMessage, RequestList, Mobile, App, DetailPanel, WorkspaceList)
+
 ## 1.6.75 (2026-03-31)
 
 - Feature: Proxy Hot-Switch — dynamically switch API proxy (URL + API Key + Model) without restarting Claude Code

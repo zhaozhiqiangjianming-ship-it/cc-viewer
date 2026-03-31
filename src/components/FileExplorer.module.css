@@ -99,7 +99,7 @@
 }
 
 .fileNameInput {
-  background: transparent;
+  background: #00000000;
   border: none;
   border-bottom: 1px solid #4a9eff;
   color: #ccc;
@@ -121,7 +121,7 @@
 }
 
 .error {
-  color: #ff6b6b;
+  color: #f87171;
   font-size: 12px;
   padding: 4px 8px;
 }

@@ -84,7 +84,7 @@
 }
 
 .filePath:hover {
-  color: #79c0ff;
+  color: #7dd3fc;
   text-decoration: underline;
 }
 
@@ -124,7 +124,7 @@
 .closeBtn:hover {
   background: #2a2a2a;
   color: #fff;
-  border-color: #4a4a4a;
+  border-color: #444;
 }
 
 .contentContainer {
@@ -147,7 +147,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #ff6b6b;
+  color: #f87171;
   font-size: 13px;
   padding: 20px;
   text-align: center;

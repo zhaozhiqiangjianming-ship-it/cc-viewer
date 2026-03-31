@@ -55,7 +55,7 @@
 }
 
 .vResizer:hover {
-  background: #333;
+  background: #303030;
 }
 
 .terminalToggle {
@@ -149,7 +149,7 @@
   padding: 6px 18px;
   border-radius: 16px;
   border: 1px solid #3a3a3a;
-  background: #ffffff0f;
+  background: #ffffff0a;
   color: #999;
   font-size: 12px;
   cursor: pointer;
@@ -157,14 +157,14 @@
 }
 
 .loadMoreBtn:hover {
-  background: #ffffff1f;
+  background: #ffffff1a;
   color: #ccc;
 }
 
 .navSidebar {
   width: 40px;
   flex-shrink: 0;
-  background: #1a1a1a;  border-right: 1px solid #2a2a2a;
+  background: #1e1e1e;  border-right: 1px solid #2a2a2a;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -215,7 +215,7 @@
 
 .navBtnActive:hover {
   background: #4a9eff40;
-  color: #6ab4ff;
+  color: #7dd3fc;
 }
 
 .navAvatarImg {
@@ -237,7 +237,7 @@
   font-size: 12px;
   color: #ccc;
   cursor: pointer;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid #1e1e1e;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -297,4 +297,19 @@
   padding: 12px 0;
   opacity: 1;
   transition: opacity 0.5s ease-out;
+}
+
+.sessionDivider {
+  border-color: #303030;
+  margin: 16px 0;
+}
+
+.loadMoreBtnLoading {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.lastResponseDivider {
+  border-color: #2a2a2a;
+  margin: 8px 0;
 }

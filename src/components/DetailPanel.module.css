@@ -63,7 +63,7 @@
 
 .tokenTd {
   flex: 1;
-  color: #d1d5db;
+  color: #e5e5e5;
   text-align: right;
   padding: 4px 8px;
   font-family: monospace;
@@ -75,7 +75,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #d1d5db;
+  color: #e5e5e5;
   padding: 4px 8px;
   font-family: monospace;
   white-space: nowrap;
@@ -94,7 +94,7 @@
 }
 
 .urlText {
-  color: #d1d5db;
+  color: #e5e5e5;
   font-size: 13px;
   margin-bottom: 8px;
   word-break: break-all;
@@ -143,7 +143,7 @@
   border-radius: 6px;
   padding: 12px;
   font-size: 12px;
-  color: #e5e7eb;
+  color: #e5e5e5;
   overflow: auto;
   max-height: 600px;
   white-space: pre-wrap;
@@ -189,8 +189,8 @@
   align-items: center;
   height: 26px;
   border-radius: 13px;
-  border: 1px solid #424242;
-  background: transparent;
+  border: 1px solid #444;
+  background: #00000000;
   color: #888;
   cursor: pointer;
   font-size: 12px;
@@ -201,8 +201,8 @@
 
 .viewInChatBtn:hover {
   border-color: #666;
-  color: #d1d5db;
-  background: #ffffff0f;
+  color: #e5e5e5;
+  background: #ffffff0a;
 }
 
 .reminderSelect {
@@ -212,8 +212,8 @@
 
 .reminderSelect :global(.ant-select-selector.ant-select-selector) {
   border-radius: 2px;
-  border-color: #424242;
-  background: transparent;
+  border-color: #444;
+  background: #00000000;
   min-height: 26px;
   height: auto;
   padding: 0 8px;
@@ -301,7 +301,7 @@
 }
 
 .cacheTokenRead {
-  color: #49aa19;
+  color: #22c55e;
 }
 
 .cacheCopyIcon {
@@ -351,6 +351,15 @@
   padding: 8px;
   margin: 4px 0;
   font-family: Menlo, Monaco, monospace;
+}
+
+.cacheHighlightSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
 }
 
 .cachePreSystem {

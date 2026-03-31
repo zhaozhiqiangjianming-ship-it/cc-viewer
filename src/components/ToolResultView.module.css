@@ -1,14 +1,14 @@
 .plainResult {
   background: #111;
   border-radius: 4px;
-  border: 1px solid #222;
+  border: 1px solid #1e1e1e;
   overflow: hidden;
   font-size: 12px;
   margin-bottom: 6px;
 }
 
 .plainResult:hover {
-  border-color: #333;
+  border-color: #303030;
 }
 
 .plainTitle {
@@ -16,7 +16,7 @@
 }
 
 .plainPre {
-  color: #d1d5db;
+  color: #e5e5e5;
   margin: 0;
   white-space: pre-wrap;
   word-break: break-all;
@@ -27,13 +27,13 @@
 .codeResult {
   background: #111;
   border-radius: 4px;
-  border: 1px solid #222;
+  border: 1px solid #1e1e1e;
   overflow: hidden;
   margin-bottom: 6px;
 }
 
 .codeResult:hover {
-  border-color: #333;
+  border-color: #303030;
 }
 
 .codeHeader {
@@ -45,17 +45,17 @@
 }
 /* 展开时才显示分隔线，收起时 codeHeader 是最后可见元素，避免与容器 border 叠加成两条线 */
 .codeHeader:not(:last-child) {
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid #1e1e1e;
 }
 
 .codeTitle {
   font-size: 11px;
-  color: #8b949e;
+  color: #888;
 }
 
 .codeToggle {
   font-size: 11px;
-  color: #484f58;
+  color: #555;
   cursor: pointer;
   user-select: none;
 }

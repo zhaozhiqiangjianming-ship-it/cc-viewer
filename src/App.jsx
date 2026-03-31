@@ -266,7 +266,7 @@ class App extends AppBase {
         {this.state.isDragging && (
           <div className={styles.dragOverlay}>
             <div className={styles.dragOverlayContent}>
-              <UploadOutlined style={{ fontSize: 48 }} />
+              <UploadOutlined className={styles.dragIcon} />
               <p>{t('ui.dragDropHint')}</p>
             </div>
           </div>

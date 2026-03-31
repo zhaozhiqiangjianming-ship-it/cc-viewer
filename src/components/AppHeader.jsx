@@ -1194,7 +1194,7 @@ class AppHeader extends React.Component {
       {
         key: 'switch-workspace',
         icon: <ImportOutlined className={styles.iconMirror} />,
-        label: <span style={{ color: '#555', cursor: 'not-allowed' }}>{t('ui.switchWorkspace')}</span>,
+        label: <span className={styles.disabledMenuItem}>{t('ui.switchWorkspace')}</span>,
         disabled: true,
       },
       {
@@ -1280,8 +1280,8 @@ class AppHeader extends React.Component {
           {this.props.activeProxyId && this.props.activeProxyId !== 'max' && (() => {
             const p = (this.props.proxyProfiles || []).find(x => x.id === this.props.activeProxyId);
             return p ? (
-              <Tag className={styles.proxyProfileTag} onClick={() => this.setState({ proxyModalVisible: true })} style={{ cursor: 'pointer' }}>
-                <SwapOutlined style={{ marginRight: 4, fontSize: 11 }} />
+              <Tag className={styles.proxyProfileTag} onClick={() => this.setState({ proxyModalVisible: true })}>
+                <SwapOutlined className={styles.proxySwapIcon} />
                 {p.name}{p.activeModel ? ` · ${p.activeModel}` : ''}
               </Tag>
             ) : null;
@@ -1723,7 +1723,7 @@ class AppHeader extends React.Component {
                 title: t('ui.processManagement.action'),
                 width: 100,
                 render: (_, record) => record.isCurrent
-                  ? <Button size="small" style={{ color: '#52c41a', borderColor: '#52c41a' }}>{t('ui.processManagement.current')}</Button>
+                  ? <Button size="small" className={styles.currentProcessBtn}>{t('ui.processManagement.current')}</Button>
                   : <Button size="small" danger onClick={() => this.handleKillProcess(record.pid)}>{t('ui.processManagement.kill')}</Button>,
               },
             ]}
@@ -1831,7 +1831,7 @@ class AppHeader extends React.Component {
             </div>
             <div className={styles.proxyEditRow}>
               <label>{t('ui.proxy.activeModel')}</label>
-              <Select size="small" style={{ width: '100%' }} value={editForm.activeModel || undefined} onChange={v => this.setState(prev => ({ editForm: { ...prev.editForm, activeModel: v } }))} placeholder={t('ui.proxy.activeModel')}>
+              <Select size="small" className={styles.fullWidthSelect} value={editForm.activeModel || undefined} onChange={v => this.setState(prev => ({ editForm: { ...prev.editForm, activeModel: v } }))} placeholder={t('ui.proxy.activeModel')}>
                 {(editForm.models || '').split(',').map(m => m.trim()).filter(Boolean).map(m => (
                   <Select.Option key={m} value={m}>{m}</Select.Option>
                 ))}

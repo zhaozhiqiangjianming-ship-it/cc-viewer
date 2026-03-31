@@ -709,7 +709,7 @@ class DetailPanel extends React.Component {
                           return (
                             <pre key={i} data-msg-idx={i} className={styles.cachePre} style={hlStyle}>
                               {isHl && (
-                                <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible', opacity: this.state.cacheHighlightFading ? 0 : 1, transition: this.state.cacheHighlightFading ? 'opacity 3s ease-out' : undefined }} preserveAspectRatio="none">
+                                <svg className={styles.cacheHighlightSvg} style={{ opacity: this.state.cacheHighlightFading ? 0 : 1, transition: this.state.cacheHighlightFading ? 'opacity 3s ease-out' : undefined }} preserveAspectRatio="none">
                                   <rect x="0.5" y="0.5" width="calc(100% - 1px)" height="calc(100% - 1px)" rx="4" ry="4"
                                     fill="none" stroke="#1668dc" strokeWidth="1" strokeDasharray="6 4">
                                     <animate attributeName="stroke-dashoffset" from="0" to="-100" dur="4s" repeatCount="indefinite" />

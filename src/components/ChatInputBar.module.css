@@ -1,6 +1,6 @@
 .chatInputBar {
   padding: 8px 16px 12px;
-  background: rgba(0, 0, 0, 0.5);
+  background: #00000080;
   flex-shrink: 0;
 }
 
@@ -8,7 +8,7 @@
   display: flex;
   flex-direction: column;
   background: #1e1e1e;
-  border: 1px solid #333;
+  border: 1px solid #303030;
   border-radius: 16px;
   transition: border-color 0.2s;
   overflow: visible;
@@ -28,8 +28,8 @@
   min-height: 22px;
   max-height: 120px;
   padding: 12px 14px 4px;
-  background: transparent;
-  color: #e0e0e0;
+  background: #00000000;
+  color: #e5e5e5;
   border: none;
   outline: none;
   resize: none;
@@ -59,7 +59,7 @@
   height: 28px;
   border-radius: 50%;
   border: 1px solid #444;
-  background: transparent;
+  background: #00000000;
   color: #888;
   cursor: pointer;
   display: flex;
@@ -96,7 +96,7 @@
   border-radius: 10px;
   padding: 4px;
   min-width: 140px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 16px #00000080;
   z-index: 100;
 }
 
@@ -107,7 +107,7 @@
   width: 100%;
   padding: 8px 12px;
   border: none;
-  background: transparent;
+  background: #00000000;
   color: #ccc;
   font-size: 13px;
   cursor: pointer;
@@ -132,6 +132,14 @@
   color: #444;
   user-select: none;
   padding: 0 4px;
+}
+
+.chatInputHintSep {
+  color: #444;
+}
+
+.chatInputHintTerminal {
+  color: #444;
 }
 
 .chatInputHintMobile {
@@ -197,7 +205,7 @@
 }
 
 .suggestionChip:hover {
-  background: #222;
+  background: #1e1e1e;
 }
 
 .suggestionChipText {
@@ -282,12 +290,12 @@
 .chatInputWrapper.streaming,
 .chatInputWrapper.streamingFading {
   position: relative;
-  border-color: transparent;
+  border-color: #00000000;
 }
 
 .chatInputWrapper.streaming:focus-within,
 .chatInputWrapper.streamingFading:focus-within {
-  border-color: transparent;
+  border-color: #00000000;
 }
 
 .streamingSvg {

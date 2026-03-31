@@ -223,7 +223,7 @@ class Mobile extends AppBase {
                 size="small"
                 icon={<RollbackOutlined />}
                 onClick={() => history.back()}
-                style={{ color: '#888', fontSize: 12 }}
+                className={styles.mobileNavBtn}
               >
                 {t('ui.mobileGoBack')}
               </Button>
@@ -326,7 +326,7 @@ class Mobile extends AppBase {
                 </div>
               )}
               <ConfigProvider theme={this.darkThemeConfig}>
-                <div className={styles.mobileChatInner} style={{ flex: 1, minHeight: 0 }}>
+                <div className={styles.mobileChatInner}>
                   <ChatView
                     requests={filteredRequests}
                     mainAgentSessions={mainAgentSessions}

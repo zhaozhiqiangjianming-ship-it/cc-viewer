@@ -124,9 +124,11 @@ function ChatInputBar({ inputRef, inputEmpty, inputSuggestion, terminalVisible, 
           <div className={isMobile ? styles.chatInputHintMobile : styles.chatInputHint}>
             {isMobile
               ? t('ui.chatInput.hintMobile')
-              : (inputSuggestion && inputEmpty
-                ? t('ui.chatInput.hintTab')
-                : t('ui.chatInput.hintEnter'))}
+              : <>
+                  {inputSuggestion && inputEmpty ? t('ui.chatInput.hintTab') : t('ui.chatInput.hintEnter')}
+                  <span className={styles.chatInputHintSep}> · </span>
+                  <span className={styles.chatInputHintTerminal}>{t('ui.chatInput.hintTerminal')}</span>
+                </>}
           </div>
           <button
             className={`${styles.sendBtn} ${inputEmpty ? styles.sendBtnDisabled : ''}`}

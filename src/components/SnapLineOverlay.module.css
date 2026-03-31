@@ -3,7 +3,7 @@
   top: 0;
   bottom: 0;
   width: 2px;
-  background: transparent;
+  background: #00000000;
   border-left: 2px dashed #ffffff1a;
   pointer-events: none;
   z-index: 1000;
@@ -15,7 +15,7 @@
   top: 0;
   bottom: 0;
   width: 2px;
-  background: transparent;
+  background: #00000000;
   border-left: 2px dashed #ffffff80;
   pointer-events: none;
   z-index: 1001;

@@ -671,7 +671,7 @@ class ChatView extends React.Component {
     let si = 0;
     for (const [name, session] of teammateMap) {
       allItems.push(
-        <Divider key={`tm-div-${si}`} style={{ borderColor: '#333', margin: '16px 0' }}>
+        <Divider key={`tm-div-${si}`} className={styles.sessionDivider}>
           <Text className={styles.sessionDividerText}>{name}</Text>
         </Divider>
       );
@@ -775,7 +775,7 @@ class ChatView extends React.Component {
       allItems.push(
         <div key="load-more-history" className={styles.loadMoreWrap}>
           {this.props.loadingMore ? (
-            <div className={styles.loadMoreBtn} style={{ cursor: 'default', opacity: 0.7 }}>
+            <div className={`${styles.loadMoreBtn} ${styles.loadMoreBtnLoading}`}>
               <Spin size="small" style={{ marginRight: 8 }} />
               {t('ui.loadingMoreHistory')}
             </div>
@@ -793,7 +793,7 @@ class ChatView extends React.Component {
     mainAgentSessions.forEach((session, si) => {
       if (si > 0) {
         allItems.push(
-          <Divider key={`session-div-${si}`} style={{ borderColor: '#333', margin: '16px 0' }}>
+          <Divider key={`session-div-${si}`} className={styles.sessionDivider}>
             <Text className={styles.sessionDividerText}>Session</Text>
           </Divider>
         );
@@ -805,7 +805,7 @@ class ChatView extends React.Component {
         allItems.push(
           <div key={`cold-session-${si}`} className={styles.loadMoreWrap}>
             {isLoading ? (
-              <div className={styles.loadMoreBtn} style={{ cursor: 'default', opacity: 0.7 }}>
+              <div className={`${styles.loadMoreBtn} ${styles.loadMoreBtnLoading}`}>
                 <Spin size="small" style={{ marginRight: 8 }} />
                 {t('ui.loadingMoreHistory')}
               </div>
@@ -907,7 +907,7 @@ class ChatView extends React.Component {
             );
             this._lastResponseItems = (
               <React.Fragment key="last-response-group">
-                <Divider style={{ borderColor: '#2a2a2a', margin: '8px 0' }}>
+                <Divider className={styles.lastResponseDivider}>
                   <Text type="secondary" className={styles.lastResponseLabel}>{t('ui.lastResponse')}</Text>
                 </Divider>
                 <ChatMessage key="resp-asst" role="assistant" content={lrContent} timestamp={session.entryTimestamp} modelInfo={modelInfo} collapseToolResults={collapseToolResults} expandThinking={expandThinking} toolResultMap={EMPTY_MAP} askAnswerMap={Object.keys(_localAsk).length > 0 ? _localAsk : EMPTY_MAP} planApprovalMap={planApprovalMap} latestPlanContent={latestPlanContent} lastPendingAskId={respLastPendingAskId} lastPendingPlanId={respLastPendingPlanId} activePlanPrompt={activePlanPrompt} activeDangerousPrompt={activeDangerousPrompt} ptyPrompt={this.state.ptyPrompt} onPlanApprovalClick={this.handlePromptOptionClick} onPlanFeedbackSubmit={this.handlePlanFeedbackSubmit} onDangerousApprovalClick={this.handlePromptOptionClick} cliMode={this.props.cliMode} onAskQuestionSubmit={this.handleAskQuestionSubmit} onOpenFile={this.handleOpenToolFilePath} />

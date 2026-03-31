@@ -26,7 +26,7 @@
   width: 100%;
   padding: 6px 10px;
   cursor: pointer;
-  color: #d1d5db;
+  color: #e5e5e5;
   font-size: 12px;
   font-weight: 600;
   transition: background 0.15s;
@@ -37,7 +37,7 @@
 }
 
 .sectionHeader:hover {
-  background: #ffffff0d;
+  background: #ffffff0a;
 }
 
 .sectionHeader:focus-visible {
@@ -91,7 +91,7 @@
 
 .historyToggle:hover {
   color: #888;
-  background: #ffffff08;
+  background: #ffffff0a;
 }
 
 .historyToggle:focus-visible {
@@ -122,7 +122,7 @@
 
 .item:hover {
   background: #ffffff0a;
-  color: #d1d5db;
+  color: #e5e5e5;
 }
 
 .item:focus-visible {
@@ -131,12 +131,12 @@
 }
 
 .itemActive {
-  background: #1668dc1f;
+  background: #1668dc26;
   color: #1668dc;
 }
 
 .itemActive:hover {
-  background: #1668dc29;
+  background: #1668dc26;
   color: #1668dc;
 }
 
@@ -217,7 +217,7 @@
 }
 
 .role_user {
-  background: #3b82f62e;
+  background: #3b82f633;
   color: #60a5fa;
   border: 1px solid #3b82f64d;
 }
@@ -252,7 +252,7 @@
 /* ── Text blocks ── */
 .textBlock {
   margin-bottom: 8px;
-  border: 1px solid #222;
+  border: 1px solid #1e1e1e;
   border-radius: 6px;
   overflow: hidden;
 }
@@ -262,15 +262,15 @@
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  background: #141414;
-  border-bottom: 1px solid #222;
+  background: #111;
+  border-bottom: 1px solid #1e1e1e;
 }
 
 .textBlockBody {
   padding: 10px 12px;
   font-size: 13px;
   line-height: 1.7;
-  color: #d1d5db;
+  color: #e5e5e5;
   word-break: break-word;
 }
 
@@ -308,7 +308,7 @@
 }
 
 .thinkingHeader:hover {
-  background: #ffffc808;
+  background: #ffffff0a;
 }
 
 .thinkingPreview {
@@ -329,13 +329,13 @@
 /* ── Tool blocks ── */
 .toolBlock {
   margin-bottom: 8px;
-  border: 1px solid #222;
+  border: 1px solid #1e1e1e;
   border-radius: 6px;
   overflow: hidden;
 }
 
 .toolBlockResult {
-  border-color: #1a2a1a;
+  border-color: #1a3a1a;
 }
 
 .toolBlockError {
@@ -347,8 +347,8 @@
   align-items: center;
   gap: 8px;
   padding: 5px 10px;
-  background: #141414;
-  border-bottom: 1px solid #222;
+  background: #111;
+  border-bottom: 1px solid #1e1e1e;
   font-size: 12px;
   flex-wrap: wrap;
 }
@@ -359,7 +359,7 @@
 }
 
 .toolName {
-  color: #d1d5db;
+  color: #e5e5e5;
   font-weight: 500;
   font-family: monospace;
 }
@@ -374,7 +374,7 @@
 .errorLabel {
   font-size: 10px;
   color: #f87171;
-  background: #ef44441f;
+  background: #ef444426;
   border: 1px solid #ef444440;
   border-radius: 3px;
   padding: 1px 5px;
@@ -402,13 +402,13 @@
 
 .blockTagThinking {
   background: #eab3081a;
-  color: #ca8a04;
+  color: #f59e0b;
   border-color: #eab30833;
 }
 
 .blockTagResult {
   background: #162312;
-  color: #49aa19;
+  color: #22c55e;
   border-color: #274916;
 }
 
@@ -421,7 +421,7 @@
 /* ── JSON block ── */
 .jsonBlock {
   margin-bottom: 8px;
-  border: 1px solid #222;
+  border: 1px solid #1e1e1e;
   border-radius: 6px;
   overflow: hidden;
 }
@@ -430,8 +430,8 @@
   font-size: 10px;
   color: #666;
   padding: 3px 10px;
-  background: #141414;
-  border-bottom: 1px solid #222;
+  background: #111;
+  border-bottom: 1px solid #1e1e1e;
   font-family: monospace;
 }
 
@@ -446,6 +446,6 @@
 .markdownBody {
   font-size: 13px;
   line-height: 1.7;
-  color: #d1d5db;
+  color: #e5e5e5;
   word-break: break-word;
 }

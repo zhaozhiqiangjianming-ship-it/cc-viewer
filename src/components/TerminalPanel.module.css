@@ -2,7 +2,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #0a0a0a;
+  background: #0d0d0d;
 }
 
 .terminalContainer {
@@ -15,7 +15,7 @@
 
 /* 隐藏 xterm textarea 的闪烁光标，避免在底部状态栏区域显示多余光标 */
 .terminalContainer :global(.xterm-helper-textarea) {
-  caret-color: transparent !important;
+  caret-color: #00000000 !important;
 }
 
 .terminalToolbar {
@@ -35,7 +35,7 @@
   gap: 4px;
   height: 26px;
   padding: 0 10px;
-  border: 1px solid #333;
+  border: 1px solid #303030;
   border-radius: 4px;
   background: #1e1e1e;
   color: #aaa;
@@ -46,7 +46,7 @@
 
 .toolbarBtn:hover {
   background: #2a2a2a;
-  color: #ddd;
+  color: #e5e5e5;
   border-color: #555;
 }
 
@@ -57,7 +57,7 @@
 .toolbarBtnDisabled:hover {
   background: #1e1e1e;
   color: #aaa;
-  border-color: #333;
+  border-color: #303030;
 }
 
 .toolbarBtn svg {
@@ -70,7 +70,7 @@
   gap: 6px;
   padding: 8px 10px;
   background: #111;
-  border-top: 1px solid #222;
+  border-top: 1px solid #1e1e1e;
   overflow-x: auto;
   flex-shrink: 0;
   -webkit-overflow-scrolling: touch;
@@ -79,7 +79,7 @@
 .virtualKey {
   flex-shrink: 0;
   padding: 12px 20px;
-  border: 1px solid #333;
+  border: 1px solid #303030;
   border-radius: 8px;
   background: #1e1e1e;
   color: #ccc;
@@ -87,7 +87,7 @@
   font-family: Menlo, Monaco, monospace;
   cursor: pointer;
   user-select: none;
-  -webkit-tap-highlight-color: transparent;
+  -webkit-tap-highlight-color: #00000000;
   touch-action: pan-x;
   min-width: 44px;
   min-height: 44px;
@@ -97,7 +97,7 @@
 }
 
 .virtualKeyPressed {
-  background: #333;
+  background: #303030;
   border-color: #555;
   color: #fff;
 }
@@ -108,7 +108,7 @@
   width: 1px;
   align-self: stretch;
   margin: 4px 2px;
-  background: #333;
+  background: #303030;
 }
 
 /* 操作按钮（上传、团队预设） */
@@ -134,7 +134,7 @@
 
 /* 团队预设按钮 */
 .vkTeamPreset {
-  border-color: #3a5a3a;
+  border-color: #2a5a3a;
 }
 
 /* 禁用态操作按钮 */
@@ -157,7 +157,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid #1e1e1e;
 }
 
 .presetRow:last-child {
@@ -194,7 +194,7 @@
 .presetText {
   flex: 1;
   font-size: 13px;
-  color: #d9d9d9;
+  color: #e5e5e5;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -209,7 +209,7 @@
 .presetMenuItem {
   background: none;
   border: none;
-  color: #d9d9d9;
+  color: #e5e5e5;
   font-size: 13px;
   padding: 6px 12px;
   text-align: left;
@@ -222,7 +222,7 @@
 }
 
 .presetMenuItem:hover {
-  background: #333;
+  background: #303030;
 }
 
 .presetName {
@@ -238,7 +238,7 @@
 .presetInput {
   width: 600px;
   background: #111;
-  border: 1px solid #333;
+  border: 1px solid #303030;
   border-radius: 6px;
   color: #e5e5e5;
   font-size: 13px;
@@ -254,7 +254,7 @@
 .presetTextarea {
   width: 600px;
   background: #111;
-  border: 1px solid #333;
+  border: 1px solid #303030;
   border-radius: 6px;
   color: #e5e5e5;
   font-size: 13px;
