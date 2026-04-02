@@ -1445,12 +1445,21 @@ class AppBase extends React.Component {
     });
   };
 
-  handleOpenLogFile = (file) => {
-    const port = window.location.port || window.location.host.split(':')[1] || '7008';
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
+  handleOpenLogFile = async (file) => {
+    // 优先使用当前 URL 的 token（远程访问时已有）；本地访问时从 /api/local-url 获取带 token 的基础 URL
+    let base = `${window.location.protocol}//${window.location.host}`;
+    let token = new URLSearchParams(window.location.search).get('token');
+    if (!token) {
+      try {
+        const r = await fetch(apiUrl('/api/local-url'));
+        if (r.ok) {
+          const data = await r.json();
+          if (data.url) { base = data.url.split('?')[0]; token = new URL(data.url).searchParams.get('token'); }
+        }
+      } catch {}
+    }
     const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
-    window.open(`${window.location.protocol}//${window.location.hostname}:${port}?logfile=${encodeURIComponent(file)}${tokenParam}`, '_blank');
+    window.open(`${base}?logfile=${encodeURIComponent(file)}${tokenParam}`, '_blank');
     this.setState({ importModalVisible: false });
   };
 

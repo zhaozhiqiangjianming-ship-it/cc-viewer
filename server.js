@@ -1212,19 +1212,14 @@ async function handleRequest(req, res) {
         return;
       }
       try {
-        const { path: filePath } = parsed;
-        if (!filePath) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Missing path' }));
-          return;
-        }
-        if (filePath.startsWith('/') || filePath.includes('..')) {
+        const relPath = parsed.path || '';
+        if (relPath.startsWith('/') || relPath.includes('..')) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Invalid path' }));
           return;
         }
         const cwd = process.env.CCV_PROJECT_DIR || process.cwd();
-        const fullPath = join(cwd, filePath);
+        const fullPath = relPath ? join(cwd, relPath) : cwd;
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, fullPath }));
       } catch (err) {
@@ -1285,6 +1280,135 @@ async function handleRequest(req, res) {
           return;
         }
         writeFileSync(fullPath, '');
+        const relPath = relDir ? `${relDir}/${name}` : name;
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, path: relPath }));
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // 在指定目录下打开系统终端
+  if (url === '/api/open-terminal' && method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; if (body.length > MAX_POST_BODY) req.destroy(); });
+    req.on('end', () => {
+      let parsed;
+      try { parsed = JSON.parse(body); } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid request body' }));
+        return;
+      }
+      try {
+        const relDir = (parsed.path || '');
+        if (relDir.startsWith('/') || relDir.includes('..')) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid path' }));
+          return;
+        }
+        const cwd = process.env.CCV_PROJECT_DIR || process.cwd();
+        const fullDir = relDir ? join(cwd, relDir) : cwd;
+        if (!existsSync(fullDir) || !statSync(fullDir).isDirectory()) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Directory not found' }));
+          return;
+        }
+        const realDir = realpathSync(fullDir);
+        const realCwd = realpathSync(cwd);
+        if (realDir !== realCwd && !realDir.startsWith(realCwd + '/')) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Path traversal not allowed' }));
+          return;
+        }
+        const plat = process.platform;
+        if (plat === 'darwin') {
+          spawn('open', ['-a', 'Terminal', fullDir], { stdio: 'ignore', detached: true }).unref();
+        } else if (plat === 'win32') {
+          spawn('cmd.exe', ['/c', 'start', 'cmd.exe'], { cwd: fullDir, stdio: 'ignore', detached: true }).unref();
+        } else {
+          // Linux: try common terminal emulators
+          const terminals = ['gnome-terminal', 'konsole', 'xfce4-terminal', 'xterm'];
+          let launched = false;
+          for (const term of terminals) {
+            try {
+              if (term === 'gnome-terminal') {
+                spawn(term, ['--working-directory=' + fullDir], { stdio: 'ignore', detached: true }).unref();
+              } else if (term === 'konsole') {
+                spawn(term, ['--workdir', fullDir], { stdio: 'ignore', detached: true }).unref();
+              } else {
+                spawn(term, [], { cwd: fullDir, stdio: 'ignore', detached: true }).unref();
+              }
+              launched = true;
+              break;
+            } catch { continue; }
+          }
+          if (!launched) {
+            spawn('xdg-open', [fullDir], { stdio: 'ignore', detached: true }).unref();
+          }
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // 在指定目录下新建空文件夹
+  if (url === '/api/create-dir' && method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; if (body.length > MAX_POST_BODY) req.destroy(); });
+    req.on('end', () => {
+      let parsed;
+      try { parsed = JSON.parse(body); } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid request body' }));
+        return;
+      }
+      try {
+        const { dirPath, name } = parsed;
+        if (!name) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Missing name' }));
+          return;
+        }
+        if (name.includes('/') || name.includes('\\') || name.includes('..') || /[\x00-\x1f]/.test(name)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid folder name' }));
+          return;
+        }
+        const relDir = dirPath || '';
+        if (relDir.startsWith('/') || relDir.includes('..')) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid path' }));
+          return;
+        }
+        const cwd = process.env.CCV_PROJECT_DIR || process.cwd();
+        const fullDirPath = relDir ? join(cwd, relDir) : cwd;
+        if (!existsSync(fullDirPath) || !statSync(fullDirPath).isDirectory()) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Directory not found' }));
+          return;
+        }
+        const realDir = realpathSync(fullDirPath);
+        const realCwd = realpathSync(cwd);
+        if (realDir !== realCwd && !realDir.startsWith(realCwd + '/')) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Path traversal not allowed' }));
+          return;
+        }
+        const fullPath = join(fullDirPath, name);
+        if (existsSync(fullPath)) {
+          res.writeHead(409, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Already exists' }));
+          return;
+        }
+        mkdirSync(fullPath);
         const relPath = relDir ? `${relDir}/${name}` : name;
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, path: relPath }));
@@ -1610,6 +1734,51 @@ async function handleRequest(req, res) {
   }
 
   // Git 状态
+  // 撤销单个文件的 git 变更
+  if (url === '/api/git-restore' && method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; if (body.length > MAX_POST_BODY) req.destroy(); });
+    req.on('end', async () => {
+      let parsed;
+      try { parsed = JSON.parse(body); } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid request body' }));
+        return;
+      }
+      try {
+        const { path: filePath } = parsed;
+        if (!filePath) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Missing path' }));
+          return;
+        }
+        if (filePath.startsWith('/') || filePath.includes('..')) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid path' }));
+          return;
+        }
+        const cwd = process.env.CCV_PROJECT_DIR || process.cwd();
+        const fullPath = join(cwd, filePath);
+        if (existsSync(fullPath)) {
+          const realFull = realpathSync(fullPath);
+          const realCwd = realpathSync(cwd);
+          if (!realFull.startsWith(realCwd + '/')) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Path traversal not allowed' }));
+            return;
+          }
+        }
+        await execFileAsync('git', ['checkout', '--', filePath], { cwd, timeout: 10000 });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    });
+    return;
+  }
+
   if (url === '/api/git-status' && method === 'GET') {
     try {
       const cwd = process.env.CCV_PROJECT_DIR || process.cwd();

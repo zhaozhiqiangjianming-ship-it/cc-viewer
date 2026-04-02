@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.6.82 (2026-04-02)
+
+- Feature: Git Changes panel — hover actions + context menu
+  - Hover file: "Open File" icon (jump to file browser with directory expand) + "Discard Changes" icon (git checkout with confirm)
+  - Right-click file: Reveal in Explorer, Copy Path, Copy Relative Path
+  - New API: `/api/git-restore` with conditional realpathSync (safe for deleted files)
+- Feature: FileExplorer header + folder context menu — "Open in Terminal" + "New Folder"
+  - New APIs: `/api/open-terminal` (macOS/Windows/Linux) + `/api/create-dir`
+  - realpathSync protection on open-terminal
+- Feature: FileExplorer header right-click menu (7 items for project root)
+- Fix: resolve-path API supports empty path (returns project root)
+- Fix: log manager "Open" button includes token for remote access via /api/local-url fallback
+- UI: hamburger menu SVG replaces favicon.ico logo
+- i18n: 5 new keys × 18 languages (newDir, openTerminal, gitChanges.openFile/restoreFile/restoreConfirm)
+
 ## 1.6.81 (2026-04-02)
 
 - Feature: folder context menu — right-click directories for quick actions

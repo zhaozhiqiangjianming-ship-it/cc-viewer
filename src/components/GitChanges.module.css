@@ -121,6 +121,34 @@
   flex: 1;
 }
 
+.actions {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.actions span {
+  color: #666;
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+}
+
+.actions span:hover {
+  color: #ccc;
+  background: #333;
+}
+
+.changeItem:hover .actions {
+  display: flex;
+}
+
 .loading {
   color: #555;
   font-size: 12px;

@@ -201,7 +201,9 @@ function TreeNode({ item, path, depth, onFileClick, expandedPaths, onToggleExpan
   const contextMenuItems = useMemo(() => {
     if (isDir) return [
       { key: 'reveal', label: t('ui.contextMenu.revealInExplorer') },
+      { key: 'openTerminal', label: t('ui.contextMenu.openTerminal') },
       { key: 'newFile', label: t('ui.contextMenu.newFile') },
+      { key: 'newDir', label: t('ui.contextMenu.newDir') },
       { type: 'divider' },
       { key: 'copyPath', label: t('ui.contextMenu.copyPath') },
       { key: 'copyRelPath', label: t('ui.contextMenu.copyRelativePath') },
@@ -223,6 +225,13 @@ function TreeNode({ item, path, depth, onFileClick, expandedPaths, onToggleExpan
     switch (key) {
       case 'reveal':
         fetch(apiUrl('/api/reveal-file'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: childPath }),
+        }).catch(() => {});
+        break;
+      case 'openTerminal':
+        fetch(apiUrl('/api/open-terminal'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ path: childPath }),
@@ -259,6 +268,27 @@ function TreeNode({ item, path, depth, onFileClick, expandedPaths, onToggleExpan
             const name = (input?.value || '').trim();
             if (!name) return Promise.reject();
             return fetch(apiUrl('/api/create-file'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ dirPath: childPath, name }),
+            }).then(r => {
+              if (r.ok && onFileRenamed) onFileRenamed(null, `${childPath}/${name}`);
+            });
+          },
+        });
+        break;
+      }
+      case 'newDir': {
+        const inputId = `ccv-newdir-${Date.now()}`;
+        Modal.confirm({
+          title: t('ui.contextMenu.newDir'),
+          content: <Input id={inputId} autoFocus placeholder="folder-name" style={{ background: '#141414', borderColor: '#2a2a2a', color: '#ccc', caretColor: '#ccc' }} onPressEnter={() => { document.querySelector('.ant-modal-confirm-btns .ant-btn-primary')?.click(); }} />,
+          okText: t('ui.contextMenu.newDir'),
+          onOk: () => {
+            const input = document.getElementById(inputId);
+            const name = (input?.value || '').trim();
+            if (!name) return Promise.reject();
+            return fetch(apiUrl('/api/create-dir'), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ dirPath: childPath, name }),
@@ -371,13 +401,94 @@ export default function FileExplorer({ onClose, onFileClick, expandedPaths, onTo
     if (refreshTrigger > 0) refreshRoot();
   }, [refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const headerMenuItems = useMemo(() => [
+    { key: 'reveal', label: t('ui.contextMenu.revealInExplorer') },
+    { key: 'openTerminal', label: t('ui.contextMenu.openTerminal') },
+    { key: 'newFile', label: t('ui.contextMenu.newFile') },
+    { key: 'newDir', label: t('ui.contextMenu.newDir') },
+    { type: 'divider' },
+    { key: 'copyPath', label: t('ui.contextMenu.copyPath') },
+    { key: 'copyRelPath', label: t('ui.contextMenu.copyRelativePath') },
+  ], []);
+
+  const handleHeaderMenuClick = useCallback(({ key }) => {
+    switch (key) {
+      case 'reveal':
+        fetch(apiUrl('/api/open-project-dir'), { method: 'POST' }).catch(() => {});
+        break;
+      case 'openTerminal':
+        fetch(apiUrl('/api/open-terminal'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: '' }),
+        }).catch(() => {});
+        break;
+      case 'newFile': {
+        const inputId = `ccv-newfile-root-${Date.now()}`;
+        Modal.confirm({
+          title: t('ui.contextMenu.newFile'),
+          content: <Input id={inputId} autoFocus placeholder="filename.ext" style={{ background: '#141414', borderColor: '#2a2a2a', color: '#ccc', caretColor: '#ccc' }} onPressEnter={() => { document.querySelector('.ant-modal-confirm-btns .ant-btn-primary')?.click(); }} />,
+          okText: t('ui.contextMenu.newFile'),
+          onOk: () => {
+            const input = document.getElementById(inputId);
+            const name = (input?.value || '').trim();
+            if (!name) return Promise.reject();
+            return fetch(apiUrl('/api/create-file'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ dirPath: '', name }),
+            }).then(r => {
+              if (r.ok && onFileRenamed) onFileRenamed(null, name);
+            });
+          },
+        });
+        break;
+      }
+      case 'newDir': {
+        const inputId = `ccv-newdir-root-${Date.now()}`;
+        Modal.confirm({
+          title: t('ui.contextMenu.newDir'),
+          content: <Input id={inputId} autoFocus placeholder="folder-name" style={{ background: '#141414', borderColor: '#2a2a2a', color: '#ccc', caretColor: '#ccc' }} onPressEnter={() => { document.querySelector('.ant-modal-confirm-btns .ant-btn-primary')?.click(); }} />,
+          okText: t('ui.contextMenu.newDir'),
+          onOk: () => {
+            const input = document.getElementById(inputId);
+            const name = (input?.value || '').trim();
+            if (!name) return Promise.reject();
+            return fetch(apiUrl('/api/create-dir'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ dirPath: '', name }),
+            }).then(r => {
+              if (r.ok && onFileRenamed) onFileRenamed(null, name);
+            });
+          },
+        });
+        break;
+      }
+      case 'copyPath':
+        fetch(apiUrl('/api/resolve-path'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: '' }),
+        }).then(r => r.json()).then(data => {
+          if (data.fullPath) navigator.clipboard.writeText(data.fullPath).then(() => message.success(t('ui.copied'))).catch(() => {});
+        }).catch(() => {});
+        break;
+      case 'copyRelPath':
+        navigator.clipboard.writeText('.').then(() => message.success(t('ui.copied'))).catch(() => {});
+        break;
+    }
+  }, [onFileRenamed]);
+
   return (
     <div className={styles.fileExplorer}>
       <div className={styles.header}>
-        <span className={styles.headerTitle}>
-          <OpenFolderIcon apiEndpoint={apiUrl('/api/open-project-dir')} title={t('ui.openProjectDir')} size={14} />
-          {t('ui.fileExplorer')}
-        </span>
+        <Dropdown menu={{ items: headerMenuItems, onClick: handleHeaderMenuClick }} trigger={['contextMenu']}>
+          <span className={styles.headerTitle}>
+            <OpenFolderIcon apiEndpoint={apiUrl('/api/open-project-dir')} title={t('ui.openProjectDir')} size={14} />
+            {t('ui.fileExplorer')}
+          </span>
+        </Dropdown>
         <button className={styles.collapseBtn} onClick={onClose} title="Close">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="11 17 6 12 11 7"/>

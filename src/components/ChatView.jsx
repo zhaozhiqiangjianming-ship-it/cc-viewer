@@ -2307,6 +2307,17 @@ class ChatView extends React.Component {
               refreshTrigger={this.state.gitChangesRefresh}
               onClose={() => this.setState({ gitChangesOpen: false })}
               onFileClick={(path) => this.setState({ currentGitDiff: path, currentFile: null })}
+              onOpenFile={(path) => {
+                const parts = path.split('/');
+                const ancestors = [];
+                for (let i = 1; i < parts.length; i++) ancestors.push(parts.slice(0, i).join('/'));
+                this._setFileExplorerOpen(true);
+                this.setState(prev => {
+                  const newSet = new Set(prev.fileExplorerExpandedPaths);
+                  ancestors.forEach(p => newSet.add(p));
+                  return { currentGitDiff: null, currentFile: path, scrollToLine: null, gitChangesOpen: false, fileExplorerExpandedPaths: newSet };
+                });
+              }}
             />
           )}
           <div className={styles.chatSection}>
