@@ -117,18 +117,17 @@
   width: 28px;
   height: 28px;
   padding: 0;
-  border: 1px solid #3a3a3a;
-  background: #1e1e1e;
+  border: none;
+  background: transparent;
   color: #888;
   border-radius: 6px;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background 0.15s, color 0.15s;
 }
 
 .closeBtn:hover {
-  background: #2a2a2a;
+  background: #ffffff1a;
   color: #fff;
-  border-color: #444;
 }
 
 .viewToggleBtn {

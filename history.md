@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.86 (2026-04-02)
+
+- Style: close button ghost style — remove border/background, show semi-transparent bg on hover (FileContentView, GitDiffView)
+- Style: reduce hamburger menu font-size to 12px (keep padding unchanged)
+- Fix: cache countdown only shown in raw/network mode, hidden in chat mode
+- Fix: enable terminal snap lines in all modes (remove incorrect token-based CLI mode detection)
+- Refactor: remove enableSnap dead code, simplify snap condition checks
+
 ## 1.6.85 (2026-04-02)
 
 - UI: enlarge hamburger dropdown menu font (14px) and item padding (8px 12px)

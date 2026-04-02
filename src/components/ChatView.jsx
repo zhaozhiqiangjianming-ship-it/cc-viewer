@@ -1717,41 +1717,35 @@ class ChatView extends React.Component {
     e.preventDefault();
     this._resizing = true;
 
-    // 只在 PC 模式下启用吸附功能
-    const isCliMode = window.location.search.includes('token=');
-    const enableSnap = !isCliMode;
-
     // 计算吸附线位置（基于终端标准列宽）
     let snapLines = [];
-    if (enableSnap) {
-      const container = this.innerSplitRef.current;
-      if (container) {
-        const rect = container.getBoundingClientRect();
-        const containerWidth = rect.width;
+    const container = this.innerSplitRef.current;
+    if (container) {
+      const rect = container.getBoundingClientRect();
+      const containerWidth = rect.width;
 
-        // 终端字体：13px Menlo/Monaco，字符宽度约为 7.8px
-        const charWidth = 7.8;
-        // 常见终端列宽：60, 80, 100, 120
-        const terminalWidths = [60, 80, 100, 120];
-        const resizerWidth = 5; // 分隔条宽度
+      // 终端字体：13px Menlo/Monaco，字符宽度约为 7.8px
+      const charWidth = 7.8;
+      // 常见终端列宽：60, 80, 100, 120
+      const terminalWidths = [60, 80, 100, 120];
+      const resizerWidth = 5; // 分隔条宽度
 
-        snapLines = terminalWidths.map(cols => {
-          const terminalPx = cols * charWidth;
-          const totalTerminalWidth = terminalPx + resizerWidth;
+      snapLines = terminalWidths.map(cols => {
+        const terminalPx = cols * charWidth;
+        const totalTerminalWidth = terminalPx + resizerWidth;
 
-          // 只保留合理范围内的吸附线（终端宽度不超过容器的75%，且不小于15%）
-          if (totalTerminalWidth > containerWidth * 0.75 || totalTerminalWidth < containerWidth * 0.15) return null;
+        // 只保留合理范围内的吸附线（终端宽度不超过容器的75%，且不小于15%）
+        if (totalTerminalWidth > containerWidth * 0.75 || totalTerminalWidth < containerWidth * 0.15) return null;
 
-          // 吸附线位置 = 容器宽度 - 终端像素宽度 - 分隔条宽度
-          const linePosition = containerWidth - terminalPx - resizerWidth;
+        // 吸附线位置 = 容器宽度 - 终端像素宽度 - 分隔条宽度
+        const linePosition = containerWidth - terminalPx - resizerWidth;
 
-          return {
-            cols,
-            terminalPx, // 终端像素宽度
-            linePosition // 吸附线显示位置
-          };
-        }).filter(snap => snap !== null);
-      }
+        return {
+          cols,
+          terminalPx, // 终端像素宽度
+          linePosition // 吸附线显示位置
+        };
+      }).filter(snap => snap !== null);
     }
 
     this.setState({ isDragging: true, snapLines });
@@ -1768,7 +1762,7 @@ class ChatView extends React.Component {
 
       // 吸附逻辑
       let activeSnapLine = null;
-      if (enableSnap && snapLines.length > 0) {
+      if (snapLines.length > 0) {
         const snapThreshold = 60; // 60px 的吸附阈值
         let minDistance = Infinity;
         let closestSnap = null;
@@ -1793,7 +1787,7 @@ class ChatView extends React.Component {
       this._resizing = false;
 
       // 松开鼠标时，吸附到最近的线
-      if (enableSnap && this.state.activeSnapLine) {
+      if (this.state.activeSnapLine) {
         const newWidth = this.state.activeSnapLine.terminalPx;
         // 保存用户偏好到 localStorage
         localStorage.setItem('cc-viewer-terminal-width', newWidth.toString());

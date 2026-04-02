@@ -1389,7 +1389,7 @@ class AppHeader extends React.Component {
         </Space>
 
         <Space size="middle">
-          {countdownText && (
+          {countdownText && viewMode === 'raw' && (
             <Tag style={{ background: '#2a2a2a', border: '1px solid #3a3a3a', color: countdownText === t('ui.cacheExpired') ? '#ff6b6b' : '#ccc' }}>
               {t('ui.cacheCountdown', { type: cacheType ? `(${cacheType})` : '' })}
               <strong className={styles.countdownStrong}>{countdownText}</strong>
