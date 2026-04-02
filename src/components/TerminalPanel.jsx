@@ -190,6 +190,18 @@ class TerminalPanel extends React.Component {
       });
     }
 
+    // Shift+Enter: 用 bracketed paste 包裹 LF，使 CLI 将其视为字面换行而非提交
+    this.terminal.attachCustomKeyEventHandler((e) => {
+      if (e.type === 'keydown' && e.key === 'Enter' && e.shiftKey) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+          this.ws.send(JSON.stringify({ type: 'input', data: '\x1b[200~\n\x1b[201~' }));
+          return false;
+        }
+        return true; // WS 未连接，不吞按键
+      }
+      return true;
+    });
+
     this.terminal.onData((data) => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         this.ws.send(JSON.stringify({ type: 'input', data }));

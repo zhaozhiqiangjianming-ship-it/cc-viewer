@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.83 (2026-04-02)
+
+- Fix: Shift+Enter in xterm terminal now inserts newline instead of submitting
+  - Uses bracketed paste sequence to send literal LF to PTY
+  - Graceful fallback when WebSocket is disconnected (does not swallow keypress)
+
 ## 1.6.82 (2026-04-02)
 
 - Feature: Git Changes panel — hover actions + context menu
