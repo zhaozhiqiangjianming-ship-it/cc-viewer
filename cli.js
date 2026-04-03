@@ -101,7 +101,7 @@ claude() {
     fi
   done
   if [ -n "$cli_js" ] && ! grep -q "CC Viewer" "$cli_js" 2>/dev/null; then
-    ccv 2>/dev/null
+    ccv -logger 2>/dev/null
   fi
   command claude "$@"
 }

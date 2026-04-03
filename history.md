@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.90 (2026-04-03)
+
+- Fix: shell hook re-injection — use `ccv -logger` instead of `ccv` to prevent launching programming mode when claude is invoked
+
 ## 1.6.89 (2026-04-03)
 
 - Fix: TeamDelete detection — treat missing tool_result as success (entry-slim clears messages, making tool_result unreachable)
