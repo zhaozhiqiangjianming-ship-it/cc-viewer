@@ -1,6 +1,6 @@
 import React from 'react';
 import { ConfigProvider, Spin, Button, Badge, Switch } from 'antd';
-import { MessageOutlined, BranchesOutlined, DownloadOutlined, DeleteOutlined, RollbackOutlined, ReloadOutlined } from '@ant-design/icons';
+import { BranchesOutlined, DownloadOutlined, DeleteOutlined, RollbackOutlined, ReloadOutlined } from '@ant-design/icons';
 import AppBase, { styles } from './AppBase';
 import { isIOS } from './env';
 import { isMainAgent, isSystemText, classifyUserContent } from './utils/contentFilter';
@@ -202,7 +202,6 @@ class Mobile extends AppBase {
     }
 
     const mobileIsLocalLog = !!this._isLocalLog;
-    const mobileChatActive = mobileIsLocalLog || this.state.mobileChatVisible;
 
     return (
       <div className={styles.mobileCLIRoot} ref={this._layoutRef}>
@@ -244,7 +243,7 @@ class Mobile extends AppBase {
                 {this.state.mobileGitDiffVisible ? t('ui.mobileGitDiffExit') : t('ui.mobileGitDiffBrowse')}
               </Button>
             )}
-            {!mobileIsLocalLog && (isIOS ? (
+            {!mobileIsLocalLog && (
               <Button
                 type="text"
                 size="small"
@@ -254,17 +253,7 @@ class Mobile extends AppBase {
               >
                 {this.state.mobileTerminalVisible ? t('ui.mobileTerminalExit') : t('ui.mobileTerminalBrowse')}
               </Button>
-            ) : (
-              <Button
-                type="text"
-                size="small"
-                icon={<MessageOutlined />}
-                onClick={() => this.setState(prev => ({ mobileChatVisible: !prev.mobileChatVisible, mobileGitDiffVisible: false, mobileTerminalVisible: false, mobileStatsVisible: false, mobileLogMgmtVisible: false, mobileSettingsVisible: false }))}
-                style={{ color: this.state.mobileChatVisible ? '#fff' : '#888', fontSize: 12 }}
-              >
-                {this.state.mobileChatVisible ? t('ui.mobileChatExit') : t('ui.mobileChatBrowse')}
-              </Button>
-            ))}
+            )}
           </div>
           {this.state.mobileMenuVisible && (
             <>
@@ -322,8 +311,7 @@ class Mobile extends AppBase {
           )}
         </div>
         <div className={styles.mobileCLIBody}>
-          {!mobileIsLocalLog && !isIOS && <TerminalPanel />}
-          {isIOS && !mobileIsLocalLog && (
+          {!mobileIsLocalLog && (
             <>
               {fileLoading && (
                 <div className={styles.mobileLoadingOverlay}>
@@ -362,7 +350,7 @@ class Mobile extends AppBase {
               </ConfigProvider>
             </>
           )}
-          {isIOS && !mobileIsLocalLog && (
+          {!mobileIsLocalLog && (
             <div className={`${styles.mobileChatOverlay} ${this.state.mobileTerminalVisible ? styles.mobileChatOverlayVisible : ''}`}>
               <TerminalPanel />
             </div>
@@ -372,45 +360,6 @@ class Mobile extends AppBase {
               <MobileGitDiff visible={this.state.mobileGitDiffVisible} />
             </div>
           </div>
-          {!isIOS && (
-          <div className={`${styles.mobileChatOverlay} ${mobileChatActive ? styles.mobileChatOverlayVisible : ''}`}>
-            {fileLoading && (
-              <div className={styles.mobileLoadingOverlay}>
-                <div className={styles.mobileLoadingSpinner} />
-                <div className={styles.mobileLoadingLabel}>{t('ui.loadingChat')}{fileLoadingCount > 0 ? ` (${fileLoadingCount})` : ''}</div>
-              </div>
-            )}
-            <ConfigProvider theme={this.darkThemeConfig}>
-              <div className={styles.mobileChatInner}>
-                <ChatView
-                  requests={filteredRequests}
-                  mainAgentSessions={mainAgentSessions}
-                  userProfile={this.state.userProfile}
-                  collapseToolResults={this.state.collapseToolResults}
-                  expandThinking={this.state.expandThinking}
-                  showFullToolContent={this.state.showFullToolContent}
-                  showThinkingSummaries={this.state.showThinkingSummaries}
-                  onViewRequest={null}
-                  scrollToTimestamp={null}
-                  onScrollTsDone={() => {}}
-                  cliMode={this.state.cliMode}
-                  sdkMode={this.state.sdkMode}
-                  terminalVisible={false}
-                  mobileChatVisible={this.state.mobileChatVisible}
-                  fileLoading={this.state.fileLoading}
-                  isStreaming={this.state.isStreaming}
-                  hasMoreHistory={this.state.hasMoreHistory}
-                  loadingMore={this.state.loadingMore}
-                  onLoadMoreHistory={() => this.loadMoreHistory()}
-                  loadingSessionId={this.state.loadingSessionId}
-                  onLoadSession={(sid) => this.loadSession(sid)}
-                  onPendingPermission={this.handlePendingPermission}
-                  onPendingPlanApproval={this.handlePendingPlanApproval}
-                />
-              </div>
-            </ConfigProvider>
-          </div>
-          )}
           <div className={`${styles.mobileStatsOverlay} ${this.state.mobileStatsVisible ? styles.mobileStatsOverlayVisible : ''}`}>
             <div className={styles.mobileStatsInner}>
               <MobileStats

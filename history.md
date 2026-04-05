@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.106 (2026-04-05)
+
+- Feat: unified mobile layout — Android now matches iOS with chat as main panel, terminal as overlay
+- Fix: iOS diff view font size inconsistency caused by Safari text auto-sizing under zoom
+
 ## 1.6.105 (2026-04-05)
 
 - Feat: custom shortcuts entry in Agent Team popover and mobile `+` menu, opens preset management modal
