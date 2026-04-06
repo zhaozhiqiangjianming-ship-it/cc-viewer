@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.112 (2026-04-06)
+
+- Fix: ExitPlanMode approval status not updating after permission denial — status stayed "pending" with buttons visible
+- Fix: Ultraplan scenario properly detected — shows "Ultraplan Executing" status with lightning icon instead of stuck "pending"
+- UI: plan header text now dynamic — "计划就绪，等待审批" when pending, "计划审批" when resolved
+- i18n: added ui.planUltraplan / ui.exitPlanModeResolved keys (18 languages)
+
 ## 1.6.111 (2026-04-06)
 
 - Feat: theme color selector in preferences — dropdown with "Standard Dark" / "Standard Light", persisted via /api/preferences
