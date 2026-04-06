@@ -350,3 +350,76 @@ describe('cold session null safety', () => {
     assert.equal(result[0].messages.length, 2);
   });
 });
+
+// ─── 14. Boundary edge cases (code review P2) ────────────────────────────────
+
+describe('empty newMessages array', () => {
+  it('treats empty messages as transient and skips merge', () => {
+    const existingMsgs = Array.from({ length: 20 }, (_, i) => makeMsg('user', `q${i}`));
+    const session = makeSession(existingMsgs);
+    const entry = makeEntry([], { userId: 'user-1' });
+
+    const result = mergeMainAgentSessions([session], entry);
+
+    // 0 < 20*0.5 && 20-0 > 4 → isNewConversation=true
+    // 0 <= 4 && 20 > 4 → transient → skip
+    assert.equal(result[0].messages.length, 20, 'should keep existing messages');
+    assert.strictEqual(result[0].messages, existingMsgs, 'reference should be unchanged');
+  });
+});
+
+describe('exact-length match with different response', () => {
+  it('updates response without touching messages', () => {
+    const msgs = [makeMsg('user', 'q1'), makeMsg('assistant', 'a1')];
+    const oldResponse = { status: 200, body: { content: [{ type: 'text', text: 'old' }] } };
+    const newResponse = { status: 200, body: { content: [{ type: 'text', text: 'new' }] } };
+    const session = makeSession(msgs, { response: oldResponse });
+
+    const entry = makeEntry(
+      [makeMsg('user', 'q1'), makeMsg('assistant', 'a1')],
+      { userId: 'user-1', response: newResponse }
+    );
+
+    const result = mergeMainAgentSessions([session], entry);
+
+    assert.equal(result[0].messages.length, 2, 'message count unchanged');
+    assert.strictEqual(result[0].messages, msgs, 'messages reference unchanged');
+    assert.strictEqual(result[0].response, newResponse, 'response should be updated');
+  });
+});
+
+describe('transient boundary: exactly 5 messages', () => {
+  it('does NOT skip merge for 5 messages (above transient threshold)', () => {
+    const existingMsgs = Array.from({ length: 20 }, (_, i) => makeMsg('user', `q${i}`));
+    const session = makeSession(existingMsgs);
+    const newMsgs = Array.from({ length: 5 }, (_, i) => makeMsg('user', `new${i}`));
+    // userId null → isNewConversation triggers new session, not transient
+    const entry = makeEntry(newMsgs, { userId: null });
+
+    const result = mergeMainAgentSessions([session], entry);
+
+    // 5 < 20*0.5=10 && 20-5=15 > 4 → isNewConversation=true
+    // 5 <= 4 is FALSE → NOT transient → new session should be created
+    assert.equal(result.length, 2, 'should create a new session');
+    assert.equal(result[1].messages.length, 5);
+  });
+});
+
+describe('null timestamp in entry', () => {
+  it('assigns null _timestamp to new messages without crashing', () => {
+    const existingMsgs = [makeMsg('user', 'q1')];
+    const session = makeSession(existingMsgs);
+    const entry = makeEntry(
+      [makeMsg('user', 'q1'), makeMsg('assistant', 'a1')],
+      { userId: 'user-1', timestamp: null }
+    );
+    // Override timestamp to null (makeEntry defaults to Date string)
+    entry.timestamp = null;
+
+    const result = mergeMainAgentSessions([session], entry);
+
+    assert.equal(result[0].messages.length, 2);
+    assert.equal(result[0].messages[1]._timestamp, null, '_timestamp should be null, not undefined');
+    assert.equal(result[0].entryTimestamp, null);
+  });
+});

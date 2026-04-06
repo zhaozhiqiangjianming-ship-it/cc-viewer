@@ -162,7 +162,7 @@ class AppBase extends React.Component {
         );
         // Transient 保护：极短 entry（<=4 msgs）在长对话后不应重置 timestamps 累积
         // 这些通常是中间态请求（request body 只有 user message，尚未拿到 response）
-        const isTransient = isNewSession && count <= 4 && prevCount > 4;
+        const isTransient = isNewSession && count <= 4 && prevCount > 4 && count < prevCount * 0.5;
         if (isNewSession && !isTransient) {
           currentSessionId = timestamp;
           timestamps = [];

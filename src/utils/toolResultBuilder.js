@@ -50,7 +50,7 @@ export function appendToolResultMap(state, messages, startIndex) {
           toolUseMap[parsed.id] = parsed;
           // Write → .claude/plans/ 文件内容追踪
           if (parsed.name === 'Write' && parsed.input?.file_path
-            && /\.claude\/plans\//i.test(parsed.input.file_path) && parsed.input.content) {
+            && /[/\\]\.claude[/\\]plans[/\\]/.test(parsed.input.file_path) && parsed.input.content) {
             state.latestPlanContent = parsed.input.content;
           }
           // Edit → editSnapshotMap + _fileState 更新
@@ -82,7 +82,7 @@ export function appendToolResultMap(state, messages, startIndex) {
                   ];
                 }
                 // Edit plan 文件时同步 latestPlanContent（Write 只追踪全量写入，Edit 追踪增量编辑后的完整内容）
-                if (/\.claude\/plans\//i.test(fp)) {
+                if (/[/\\]\.claude[/\\]plans[/\\]/.test(fp)) {
                   state.latestPlanContent = entry.plainText;
                 }
               }
@@ -155,6 +155,7 @@ export function appendToolResultMap(state, messages, startIndex) {
             } else {
               askAnswerMap[block.tool_use_id] = parsed;
             }
+            state._askDirty = (state._askDirty || 0) + 1;
           }
           if (matchedTool && matchedTool.name === 'ExitPlanMode') {
             planApprovalMap[block.tool_use_id] = parsePlanApproval(resultText);

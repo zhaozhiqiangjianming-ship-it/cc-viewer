@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.109 (2026-04-06)
+
+- Fix: AskUserQuestion "Other" submit stuck — localAskAnswers state change now triggers Last Response rebuild
+- Fix: align transient filter condition between AppBase timestamp accumulation and sessionMerge
+- Fix: tighten plan file regex to prevent false positives on unrelated paths containing "plans"
+- Fix: mergedAskAnswerMap cache invalidation — added dirty counter for incremental AskUserQuestion updates
+- Test: added 4 boundary edge cases for incremental merge (empty messages, exact-length, threshold boundary, null timestamp)
+
 ## 1.6.108 (2026-04-06)
 
 - Perf: incremental chat rendering — session.messages uses push instead of full array replacement, keeping WeakMap cache stable

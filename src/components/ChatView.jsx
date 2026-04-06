@@ -367,6 +367,12 @@ class ChatView extends React.Component {
       const allItems = this._applyMobileSlice(rawItems);
       this.setState({ allItems, lastResponseItems: this._lastResponseItems, visibleCount: allItems.length });
     }
+    // localAskAnswers 变化时重建 Last Response，使交互表单切换到已回答的静态视图
+    if (prevState.localAskAnswers !== this.state.localAskAnswers &&
+        prevProps.mainAgentSessions === this.props.mainAgentSessions &&
+        prevProps.requests === this.props.requests) {
+      this.startRender();
+    }
     // scrollToTimestamp 变化时（如从 raw 模式切回 chat），重建 items 并滚动定位
     if (!prevProps.scrollToTimestamp && this.props.scrollToTimestamp) {
       // If target is in hidden area, expand to include it
@@ -707,12 +713,14 @@ class ChatView extends React.Component {
     // 合并 localAskAnswers 到历史 askAnswerMap，使提交后立即显示已回答
     // 缓存引用：只在 _localAsk 或 askAnswerMap 变化时重建，避免每次创建新对象导致 shouldComponentUpdate 级联触发
     const _localAsk = this.state.localAskAnswers || {};
-    if (this._prevAskCache !== askAnswerMap || this._prevLocalAsk !== _localAsk) {
+    const _askDirty = cached?._askDirty || 0;
+    if (this._prevAskCache !== askAnswerMap || this._prevLocalAsk !== _localAsk || this._prevAskDirty !== _askDirty) {
       this._mergedAskAnswerMap = Object.keys(_localAsk).length > 0
         ? { ...askAnswerMap, ..._localAsk }
         : askAnswerMap;
       this._prevAskCache = askAnswerMap;
       this._prevLocalAsk = _localAsk;
+      this._prevAskDirty = _askDirty;
     }
     const mergedAskAnswerMap = this._mergedAskAnswerMap;
     for (const msg of messages) {
