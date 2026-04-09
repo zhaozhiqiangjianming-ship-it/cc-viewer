@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.128 (2026-04-09)
+
+- UI: request list active/hover border styling with blue border and faint background
+- UI: context tab (history sessions) active state with blue border and rounded corners
+
 ## 1.6.127 (2026-04-09)
 
 - Feat: auto-approve tool permissions with configurable countdown (off/3s/5s/10s/15s/20s/30s/60s)
